@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mastrox Model Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --text: #0b0b0b; --text-2: #3a3a3a; --divider: rgba(0,0,0,.08); --accent: #f07a22; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #d9dde0; color: var(--text);
+    font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; }
+  #app { position: fixed; inset: 0; }
+  .glass {
+    position: absolute; background: rgba(255,255,255,.72); border: 1px solid rgba(255,255,255,.75); border-radius: 14px;
+    box-shadow: inset 0 1px 1px rgba(255,255,255,.9), 0 8px 24px rgba(0,0,0,.12);
+    backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+  #left { top: 16px; left: 16px; width: 300px; padding: 14px 16px; max-height: calc(100% - 32px); overflow: auto; }
+  #right { top: 16px; right: 16px; width: 300px; padding: 14px 16px; max-height: calc(100% - 32px); overflow: auto; }
+  #bar { bottom: 16px; left: 50%; transform: translateX(-50%); padding: 6px; display: flex; gap: 4px; align-items: center; }
+  h2 { font-size: 12px; font-weight: 500; color: var(--text-2); margin: 14px 0 6px; }
+  h2:first-child { margin-top: 0; }
+  select, input[type=text], input[type=number] { font: inherit; color: var(--text); border-radius: 8px; border: 1px solid rgba(0,0,0,.15);
+    background: rgba(255,255,255,.8); }
+  select { width: 100%; height: 38px; padding: 0 10px; font-size: 15px; font-weight: 600; }
+  input[type=number] { width: 100%; height: 30px; padding: 0 6px; font-size: 13px; font-variant-numeric: tabular-nums; }
+  input[type=text] { width: 100%; height: 30px; padding: 0 8px; font-size: 13px; }
+  button { font: inherit; cursor: pointer; color: var(--text); }
+  .tool { height: 32px; min-width: 32px; padding: 0 10px; border-radius: 8px; border: none; background: transparent; font-size: 13px; }
+  .tool:hover { background: rgba(0,0,0,.06); }
+  .tool.on, .tool.on:hover { background: #0b0b0b; color: #fff; }
+  .tool:disabled { opacity: .35; cursor: default; background: transparent; }
+  .sep { width: 1px; height: 22px; background: var(--divider); margin: 0 4px; }
+  .btn { height: 32px; border-radius: 8px; font-size: 13px; padding: 0 10px; text-align: left;
+    background: rgba(255,255,255,.55); border: 1px solid rgba(0,0,0,.08); }
+  .btn:hover { background: rgba(255,255,255,.9); }
+  .btn.warn { color: #b42318; }
+  .btn:disabled { opacity: .4; cursor: default; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .xyz { display: grid; grid-template-columns: 52px 1fr 1fr 1fr; gap: 4px; align-items: center; font-size: 12px; margin-bottom: 4px; }
+  .xyz span { color: var(--text-2); }
+  .hint { font-size: 12px; color: var(--text-2); line-height: 1.5; margin: 6px 0 0; }
+  .sel-name { font-size: 14px; font-weight: 600; word-break: break-all; }
+  .sel-meta { font-size: 12px; color: var(--text-2); margin: 2px 0 8px; font-variant-numeric: tabular-nums; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; margin: 6px 0; }
+  .row label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+  input[type=color] { width: 44px; height: 30px; padding: 0; border: 1px solid rgba(0,0,0,.15); border-radius: 8px; background: none; }
+  #tree { font-size: 12px; max-height: 260px; overflow: auto; border-top: 1px solid var(--divider); padding-top: 4px; }
+  #tree div { padding: 2px 4px; border-radius: 6px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #tree div:hover { background: rgba(0,0,0,.05); }
+  #tree div.on { background: #0b0b0b; color: #fff; }
+  #tree div.off { opacity: .45; text-decoration: line-through; }
+  #log { font-size: 12px; max-height: 150px; overflow: auto; margin: 0; padding-left: 18px; color: var(--text-2); }
+  #msg { font-size: 12px; color: var(--text-2); min-height: 16px; margin: 6px 0 0; line-height: 1.4; }
+  a { color: var(--text); font-size: 13px; }
+  kbd { font: 11px ui-monospace, monospace; background: rgba(0,0,0,.06); border-radius: 4px; padding: 0 4px; }
+  #empty { font-size: 13px; color: var(--text-2); line-height: 1.6; }
+  @media (max-width: 900px) {
+    #left { width: auto; right: 16px; max-height: 38%; }
+    #right { top: auto; bottom: 70px; left: 16px; width: auto; max-height: 34%; }
+  }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="left" class="glass">
+  <select id="pick" aria-label="เลือกเครื่อง"></select>
+  <h2>ชิ้นส่วนในโมเดล (คลิกเพื่อเลือก)</h2>
+  <div id="tree"></div>
+  <h2>การแก้ไขที่บันทึกไว้ของรุ่นนี้</h2>
+  <ol id="log"></ol>
+  <div class="grid2" style="margin-top:8px">
+    <button class="btn" id="save-file">บันทึกเป็นไฟล์</button>
+    <button class="btn" id="load-file">เปิดไฟล์</button>
+    <button class="btn warn" id="clear">ล้างทั้งหมด</button>
+    <button class="btn" id="view">ดูในหน้าโมเดล</button>
+  </div>
+  <input type="file" id="file" accept=".json,application/json" hidden>
+  <h2>Export โมเดลที่แก้แล้ว (หน่วยเมตร)</h2>
+  <div class="grid2">
+    <button class="btn" data-exp="dae">SketchUp .dae</button>
+    <button class="btn" data-exp="obj">OBJ + .mtl</button>
+    <button class="btn" data-exp="glb">Blender .glb</button>
+    <button class="btn" data-exp="stl">STL .stl</button>
+  </div>
+  <p id="msg"></p>
+  <p class="hint">การแก้ไขบันทึกอัตโนมัติในเบราว์เซอร์นี้ และหน้าโมเดล (index.html) จะแสดงตามที่แก้ ใช้ “บันทึกเป็นไฟล์” เพื่อเก็บสำรองหรือส่งต่อ<br>
+  <a href="index.html" id="back">← กลับหน้าดูโมเดล</a></p>
+</div>
+
+<div id="right" class="glass">
+  <div id="empty">คลิกที่ชิ้นส่วนในโมเดลเพื่อเลือก<br>
+    <kbd>W</kbd> ย้าย · <kbd>E</kbd> หมุน · <kbd>R</kbd> ย่อ/ขยาย<br>
+    <kbd>Alt</kbd>+คลิก หรือ <kbd>P</kbd> เลือกทั้งกลุ่ม · <kbd>Del</kbd> ลบ · <kbd>H</kbd> ซ่อน<br>
+    <kbd>Ctrl+D</kbd> ทำซ้ำ · <kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd> ย้อน/ทำซ้ำ<br>
+    <kbd>Esc</kbd> ยกเลิกเลือก · <kbd>F</kbd> ซูมไปที่ชิ้นที่เลือก</div>
+  <div id="insp" hidden>
+    <div class="sel-name" id="sel-name"></div>
+    <div class="sel-meta" id="sel-meta"></div>
+    <div class="row"><input type="text" id="name" placeholder="ตั้งชื่อชิ้นส่วน"></div>
+    <h2>ตำแหน่ง (mm, เทียบกลุ่มแม่)</h2>
+    <div class="xyz"><span></span><span>X</span><span>Y</span><span>Z</span></div>
+    <div class="xyz"><span>ย้าย</span><input type="number" step="1" data-k="p0"><input type="number" step="1" data-k="p1"><input type="number" step="1" data-k="p2"></div>
+    <div class="xyz"><span>หมุน (°)</span><input type="number" step="1" data-k="r0"><input type="number" step="1" data-k="r1"><input type="number" step="1" data-k="r2"></div>
+    <div class="xyz"><span>สเกล</span><input type="number" step="0.01" data-k="s0"><input type="number" step="0.01" data-k="s1"><input type="number" step="0.01" data-k="s2"></div>
+    <h2>สี</h2>
+    <div class="row">
+      <input type="color" id="color">
+      <label><input type="checkbox" id="same-mat"> ทุกชิ้นที่ใช้วัสดุเดียวกัน</label>
+    </div>
+    <h2>จัดการ</h2>
+    <div class="grid2">
+      <button class="btn" id="parent">↑ เลือกกลุ่มแม่</button>
+      <button class="btn" id="hide">ซ่อน</button>
+      <button class="btn" id="dup">ทำซ้ำ</button>
+      <button class="btn warn" id="del">ลบ</button>
+      <button class="btn" id="reset" style="grid-column: span 2">คืนค่าตำแหน่งเดิมของชิ้นนี้</button>
+    </div>
+    <p class="hint" id="anim-hint" hidden>ชิ้นนี้ขยับตามแอนิเมชัน ถ้ากดเล่น ตำแหน่งที่แก้อาจถูกแอนิเมชันเขียนทับ</p>
+  </div>
+</div>
+
+<div id="bar" class="glass">
+  <button class="tool on" data-mode="translate" title="ย้าย (W)">ย้าย</button>
+  <button class="tool" data-mode="rotate" title="หมุน (E)">หมุน</button>
+  <button class="tool" data-mode="scale" title="ย่อ/ขยาย (R)">สเกล</button>
+  <div class="sep"></div>
+  <button class="tool" id="space" title="แกนของโลก / แกนของชิ้น">แกน: โลก</button>
+  <button class="tool on" id="snap" title="ขยับทีละ 10 mm / 5°">Snap</button>
+  <button class="tool on" id="glass" title="คลิกทะลุกระจก/ฝาโปร่งใส">ทะลุกระจก</button>
+  <div class="sep"></div>
+  <button class="tool" id="undo" title="ย้อน (Ctrl+Z)">↶</button>
+  <button class="tool" id="redo" title="ทำซ้ำ (Ctrl+Y)">↷</button>
+  <div class="sep"></div>
+  <button class="tool" id="play" title="เล่น/หยุดแอนิเมชัน">▶ เล่น</button>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
+import { MODELS } from './machines/registry.js';
+import { MACHINES } from './data/machines.js';
+import { toDAE, toOBJ, toSTL, toGLB } from './export.js';
+import { pathOf, nodeAt, applyOp, applyEdits, loadEdits, saveEdits, boundsOf } from './edits.js';
+
+const $ = id => document.getElementById(id);
+const DEG = 180 / Math.PI;
+
+// ---------- Scene (same look as the viewer) ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+$('app').appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#d9dde0');
+const camera = new THREE.PerspectiveCamera(35, 1, 0.02, 200);
+const orbit = new OrbitControls(camera, renderer.domElement);
+orbit.enableDamping = true;
+orbit.maxDistance = 40;
+scene.add(new THREE.HemisphereLight('#ffffff', '#7d8086', 1.4));
+const key = new THREE.DirectionalLight('#ffffff', 2.4);
+key.position.set(3, 6, 4);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6 });
+scene.add(key);
+const fill = new THREE.DirectionalLight('#ffffff', 0.9);
+fill.position.set(-4, 3, -4);
+scene.add(fill);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: '#c9ccce', roughness: 0.9 }));
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+scene.add(floor);
+const grid = new THREE.GridHelper(20, 40, '#a9adb1', '#bcc0c3');
+grid.position.y = 0.001;
+scene.add(grid);
+
+const tc = new TransformControls(camera, renderer.domElement);
+const tcHelper = tc.getHelper ? tc.getHelper() : tc; // r169+ keeps the gizmo in a helper object
+scene.add(tcHelper);
+tc.setTranslationSnap(0.01);
+tc.setRotationSnap(THREE.MathUtils.degToRad(5));
+tc.setScaleSnap(0.05);
+tc.addEventListener('dragging-changed', e => {
+  orbit.enabled = !e.value;
+  if (!e.value && selected) commitXform();
+  if (e.value) dragging = true; else setTimeout(() => (dragging = false), 0);
+});
+tc.addEventListener('objectChange', () => { fillInspector(); updateBox(); });
+
+const selBox = new THREE.Box3Helper(new THREE.Box3(), 0xf07a22);
+selBox.visible = false;
+scene.add(selBox);
+
+// ---------- State ----------
+const byId = Object.fromEntries(MACHINES.map(m => [m.id, m]));
+$('pick').innerHTML = Object.keys(MODELS).map(id => `<option value="${id}">${byId[id]?.name ?? id}</option>`).join('');
+let id = null, machine = null, ops = [], redo = [], selected = null, selPath = null, playing = false, dragging = false;
+let animated = new Set(); // paths of nodes the model's animation moves
+
+function build() {
+  // Fresh model, then replay the edits. Used on load, undo and redo.
+  if (machine) scene.remove(machine.object);
+  machine = MODELS[id]();
+  applyEdits(machine.object, ops);
+  scene.add(machine.object);
+  machine.object.updateMatrixWorld(true);
+  if (selPath != null) select(nodeAt(machine.object, selPath), false); else select(null, false);
+  buildTree();
+  renderLog();
+}
+
+function findAnimated() {
+  // Run a throw-away copy for a while and see which nodes move.
+  const probe = MODELS[id]();
+  const snap = () => { const s = new Map(); probe.object.traverse(o => s.set(pathOf(probe.object, o), o.position.toArray().concat(o.rotation.toArray().slice(0, 3), o.scale.toArray()).join())); return s; };
+  const a = snap();
+  animated = new Set();
+  for (let i = 0; i < 40; i++) {
+    for (let k = 0; k < 15; k++) probe.update(1 / 30);
+    for (const [p, v] of snap()) if (a.get(p) !== v) animated.add(p);
+  }
+}
+
+function load(newId) {
+  id = newId;
+  $('pick').value = id;
+  history.replaceState(null, '', `?m=${id}`);
+  document.title = `แก้ไข ${byId[id]?.name ?? id}`;
+  $('back').href = `index.html?m=${id}`;
+  ops = loadEdits(id);
+  redo = [];
+  selPath = null;
+  build();
+  findAnimated();
+  frameAll();
+}
+
+function persist() {
+  if (!saveEdits(id, ops)) msg('บันทึกในเบราว์เซอร์ไม่ได้ (storage ถูกปิด) ใช้ “บันทึกเป็นไฟล์” แทน');
+}
+
+function push(op, rebuild = false) {
+  ops.push(op);
+  redo = [];
+  if (rebuild) build(); else { applyOp(machine.object, op); buildTree(); renderLog(); }
+  persist();
+}
+
+// ---------- Selection ----------
+function select(o, rebuildTree = true) {
+  if (o === machine?.object) o = null;
+  selected = o || null;
+  selPath = selected ? pathOf(machine.object, selected) : null;
+  if (selected) tc.attach(selected); else tc.detach();
+  $('insp').hidden = !selected;
+  $('empty').hidden = !!selected;
+  if (selected) fillInspector();
+  updateBox();
+  if (rebuildTree) markTree();
+}
+
+function updateBox() {
+  if (!selected) { selBox.visible = false; return; }
+  selected.updateMatrixWorld(true);
+  selBox.box.copy(boundsOf(selected));
+  selBox.visible = !selBox.box.isEmpty();
+}
+
+function label(o) {
+  const kind = o.isInstancedMesh ? `ชุดซ้ำ ×${o.count}` : o.isMesh ? ({ BoxGeometry: 'กล่อง', CylinderGeometry: 'ทรงกระบอก', TubeGeometry: 'ท่อ',
+    TorusGeometry: 'วงแหวน', PlaneGeometry: 'แผ่นป้าย', ShapeGeometry: 'รูปทรง', ExtrudeGeometry: 'ทรงอัด' }[o.geometry.type] ?? o.geometry.type)
+    : o.isLight ? 'ไฟ' : o.isGroup ? `กลุ่ม (${o.children.length})` : o.type;
+  return o.name ? `${o.name} · ${kind}` : kind;
+}
+
+function fillInspector() {
+  if (!selected) return;
+  const o = selected;
+  $('sel-name').textContent = label(o);
+  const size = boundsOf(o).getSize(new THREE.Vector3());
+  const col = colorOf(o);
+  $('sel-meta').textContent = `path ${selPath} · ขนาด ${Math.round(size.x * 1000)} × ${Math.round(size.y * 1000)} × ${Math.round(size.z * 1000)} mm` + (o === machine.workpiece ? ' · ชิ้นงาน' : '');
+  $('name').value = o.name || '';
+  const v = { p: o.position.toArray().map(x => x * 1000), r: [o.rotation.x, o.rotation.y, o.rotation.z].map(x => x * DEG), s: o.scale.toArray() };
+  document.querySelectorAll('#insp input[data-k]').forEach(inp => {
+    if (document.activeElement === inp) return;
+    const [k, i] = [inp.dataset.k[0], +inp.dataset.k[1]];
+    inp.value = k === 's' ? +v[k][i].toFixed(3) : +v[k][i].toFixed(1);
+  });
+  $('color').disabled = !col;
+  if (col) $('color').value = col;
+  $('hide').textContent = o.userData.hidden ? 'แสดง' : 'ซ่อน';
+  $('anim-hint').hidden = !isAnimated(selPath);
+}
+
+function isAnimated(path) {
+  for (const p of animated) if (p === path || p.startsWith(path + '/') || path.startsWith(p + '/')) return true;
+  return false;
+}
+
+function colorOf(o) {
+  let c = null;
+  o.traverse(m => { if (!c && m.isMesh) { const mt = Array.isArray(m.material) ? m.material[0] : m.material; if (mt.color && !mt.map) c = '#' + mt.color.getHexString(); } });
+  return c;
+}
+
+function commitXform() {
+  const o = selected;
+  push({ type: 'xform', path: selPath, p: o.position.toArray(), r: [o.rotation.x, o.rotation.y, o.rotation.z], s: o.scale.toArray() });
+}
+
+document.querySelectorAll('#insp input[data-k]').forEach(inp => inp.addEventListener('change', () => {
+  if (!selected || inp.value === '') return;
+  const [k, i] = [inp.dataset.k[0], +inp.dataset.k[1]];
+  const v = +inp.value;
+  if (k === 'p') selected.position.setComponent(i, v / 1000);
+  if (k === 'r') selected.rotation[['x', 'y', 'z'][i]] = v / DEG;
+  if (k === 's') selected.scale.setComponent(i, v || 0.001);
+  commitXform();
+  fillInspector();
+  updateBox();
+}));
+$('name').addEventListener('change', () => { if (selected) push({ type: 'rename', path: selPath, name: $('name').value.trim() }); fillInspector(); });
+$('color').addEventListener('change', () => {
+  if (!selected) return;
+  push({ type: $('same-mat').checked ? 'matColor' : 'color', path: selPath, color: $('color').value }, true);
+});
+$('parent').addEventListener('click', () => selected && select(selected.parent));
+$('hide').addEventListener('click', toggleHide);
+$('dup').addEventListener('click', duplicate);
+$('del').addEventListener('click', remove);
+$('reset').addEventListener('click', () => {
+  if (!selected) return;
+  const fresh = nodeAt(MODELS[id]().object, selPath);
+  if (!fresh) return msg('ชิ้นนี้เป็นชิ้นที่ทำซ้ำขึ้นมา ไม่มีตำแหน่งเดิม');
+  push({ type: 'xform', path: selPath, p: fresh.position.toArray(), r: [fresh.rotation.x, fresh.rotation.y, fresh.rotation.z], s: fresh.scale.toArray() }, true);
+});
+
+function toggleHide() { if (selected) { push({ type: 'hide', path: selPath, hidden: !selected.userData.hidden }); fillInspector(); updateBox(); } }
+function duplicate() {
+  if (!selected) return;
+  const parentPath = pathOf(machine.object, selected.parent);
+  push({ type: 'dup', path: selPath }, true);
+  const parent = nodeAt(machine.object, parentPath);
+  select(parent.children[parent.children.length - 1]);
+  msg('ทำซ้ำแล้ว ชิ้นใหม่เลื่อนไป +100 mm ตามแกน X');
+}
+function remove() {
+  if (!selected) return;
+  push({ type: 'delete', path: selPath });
+  select(null);
+}
+
+// ---------- Picking ----------
+const ray = new THREE.Raycaster();
+let downAt = null;
+renderer.domElement.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!downAt || dragging || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 4) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  ray.setFromCamera(new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1), camera);
+  const skipGlass = $('glass').classList.contains('on');
+  const hit = ray.intersectObject(machine.object, true).find(h => {
+    if (!h.object.isMesh) return false;
+    for (let o = h.object; o; o = o.parent) if (!o.visible) return false;
+    const m = Array.isArray(h.object.material) ? h.object.material[0] : h.object.material;
+    return !(skipGlass && m.transparent && m.opacity < 0.9 && !m.map);
+  });
+  // Alt+click grabs the part's whole group (e.g. a complete head or the hood).
+  select(hit ? (e.altKey ? hit.object.parent : hit.object) : null);
+});
+
+// ---------- Tree ----------
+function buildTree() {
+  const rows = [];
+  const walk = (o, depth) => {
+    for (const c of o.children) {
+      if (c.isLight || c.isCSS2DObject) continue;
+      // Color dot and size help tell the many plain boxes apart.
+      const col = colorOf(c), sz = boundsOf(c).getSize(new THREE.Vector3());
+      const dims = sz.lengthSq() ? ` <span style="opacity:.55">${[sz.x, sz.y, sz.z].map(v => Math.round(v * 1000)).join('×')}</span>` : '';
+      rows.push(`<div data-p="${pathOf(machine.object, c)}" class="${c.visible ? '' : 'off'}" style="padding-left:${4 + depth * 12}px">${col ? `<span style="color:${col}">●</span> ` : ''}${escape(label(c))}${dims}</div>`);
+      if (c.isGroup && depth < 4) walk(c, depth + 1);
+    }
+  };
+  walk(machine.object, 0);
+  $('tree').innerHTML = rows.join('');
+  markTree();
+}
+const escape = s => s.replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+function markTree() {
+  let on = null;
+  $('tree').querySelectorAll('div').forEach(d => { const yes = d.dataset.p === selPath; d.classList.toggle('on', yes); if (yes) on = d; });
+  on?.scrollIntoView({ block: 'nearest' });
+}
+$('tree').addEventListener('click', e => { const d = e.target.closest('[data-p]'); if (d) select(nodeAt(machine.object, d.dataset.p)); });
+
+// ---------- Log, undo / redo, files ----------
+const OPNAME = { xform: 'ย้าย/หมุน/สเกล', color: 'เปลี่ยนสี', matColor: 'เปลี่ยนสีทั้งวัสดุ', hide: 'ซ่อน/แสดง', delete: 'ลบ', dup: 'ทำซ้ำ', rename: 'ตั้งชื่อ' };
+function renderLog() {
+  $('log').innerHTML = ops.length ? ops.map(o => `<li>${OPNAME[o.type] ?? o.type} <span style="opacity:.6">${o.path}</span>${o.color ? ` <span style="color:${o.color}">■</span>` : ''}</li>`).join('')
+    : '<span style="margin-left:-18px">ยังไม่มีการแก้ไข</span>';
+  $('log').scrollTop = 1e6;
+  $('undo').disabled = !ops.length;
+  $('redo').disabled = !redo.length;
+}
+function undo() { if (!ops.length) return; redo.push(ops.pop()); build(); persist(); }
+function redoOp() { if (!redo.length) return; ops.push(redo.pop()); build(); persist(); }
+$('undo').addEventListener('click', undo);
+$('redo').addEventListener('click', redoOp);
+$('clear').addEventListener('click', () => {
+  if (!ops.length) return;
+  if (!confirm('ล้างการแก้ไขทั้งหมดของรุ่นนี้? (ย้อนกลับด้วย Ctrl+Z ไม่ได้)')) return;
+  ops = []; redo = []; selPath = null; build(); persist();
+});
+$('view').addEventListener('click', () => { location.href = `index.html?m=${id}`; });
+
+function download(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+$('save-file').addEventListener('click', () => {
+  download(new Blob([JSON.stringify({ machine: id, savedAt: new Date().toISOString(), ops }, null, 1)], { type: 'application/json' }), `edits-${id}.json`);
+  msg(`edits-${id}.json · ${ops.length} รายการ`);
+});
+$('load-file').addEventListener('click', () => $('file').click());
+$('file').addEventListener('change', async () => {
+  const f = $('file').files[0];
+  $('file').value = '';
+  if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    const list = Array.isArray(data) ? data : data.ops;
+    if (!Array.isArray(list)) throw new Error('ไม่ใช่ไฟล์การแก้ไข');
+    if (data.machine && data.machine !== id && MODELS[data.machine]) load(data.machine);
+    ops = list; redo = []; selPath = null; build(); persist();
+    msg(`เปิด ${f.name} แล้ว · ${list.length} รายการ`);
+  } catch (err) { msg('เปิดไฟล์ไม่ได้: ' + err.message); }
+});
+
+// ---------- Export ----------
+async function loadZip() {
+  if (window.JSZip) return window.JSZip;
+  await new Promise((ok, fail) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    s.onload = ok; s.onerror = () => fail(new Error('โหลด JSZip ไม่ได้'));
+    document.head.appendChild(s);
+  });
+  return window.JSZip;
+}
+document.querySelectorAll('[data-exp]').forEach(b => b.addEventListener('click', async () => {
+  const kind = b.dataset.exp, obj = machine.object, title = byId[id]?.name ?? id;
+  b.disabled = true;
+  msg('กำลังสร้างไฟล์…');
+  const was = selBox.visible; selBox.visible = false;
+  try {
+    let blob, name;
+    if (kind === 'dae') [blob, name] = [new Blob([toDAE(obj, title)]), `${id}-edited.dae`];
+    else if (kind === 'stl') [blob, name] = [new Blob([toSTL(obj)]), `${id}-edited.stl`];
+    else if (kind === 'glb') [blob, name] = [new Blob([await toGLB(obj)]), `${id}-edited.glb`];
+    else {
+      const { obj: text, mtl } = toOBJ(obj, `${id}-edited`);
+      const zip = new (await loadZip())();
+      zip.file(`${id}-edited.obj`, text);
+      zip.file(`${id}-edited.mtl`, mtl);
+      [blob, name] = [await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' }), `${id}-edited-obj.zip`];
+    }
+    download(blob, name);
+    msg(`${name} (${(blob.size / 1024 / 1024).toFixed(1)} MB)`);
+  } catch (err) { msg('สร้างไฟล์ไม่สำเร็จ: ' + err.message); }
+  finally { b.disabled = false; selBox.visible = was; }
+}));
+
+// ---------- Toolbar & keys ----------
+function setMode(m) {
+  tc.setMode(m);
+  document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+}
+document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+$('space').addEventListener('click', () => {
+  tc.setSpace(tc.space === 'world' ? 'local' : 'world');
+  $('space').textContent = tc.space === 'world' ? 'แกน: โลก' : 'แกน: ชิ้น';
+});
+$('snap').addEventListener('click', () => {
+  const on = $('snap').classList.toggle('on');
+  tc.setTranslationSnap(on ? 0.01 : null);
+  tc.setRotationSnap(on ? THREE.MathUtils.degToRad(5) : null);
+  tc.setScaleSnap(on ? 0.05 : null);
+});
+$('glass').addEventListener('click', () => $('glass').classList.toggle('on'));
+$('play').addEventListener('click', () => {
+  playing = !playing;
+  $('play').textContent = playing ? '❚❚ หยุด' : '▶ เล่น';
+  $('play').classList.toggle('on', playing);
+  if (!playing) build(); // back to the start pose, where the edits apply
+});
+$('pick').addEventListener('change', e => load(e.target.value));
+
+addEventListener('keydown', e => {
+  if (e.target.matches('input, select, textarea')) return;
+  const k = e.key.toLowerCase();
+  if ((e.ctrlKey || e.metaKey) && k === 'z') { e.preventDefault(); e.shiftKey ? redoOp() : undo(); return; }
+  if ((e.ctrlKey || e.metaKey) && k === 'y') { e.preventDefault(); redoOp(); return; }
+  if ((e.ctrlKey || e.metaKey) && k === 'd') { e.preventDefault(); duplicate(); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (k === 'w') setMode('translate');
+  else if (k === 'e') setMode('rotate');
+  else if (k === 'r') setMode('scale');
+  else if (k === 'p' && selected) select(selected.parent);
+  else if (k === 'h') toggleHide();
+  else if (k === 'delete' || k === 'backspace') remove();
+  else if (k === 'escape') select(null);
+  else if (k === 'f') selected ? frame(boundsOf(selected)) : frameAll();
+});
+
+// ---------- Camera ----------
+function frame(box) {
+  if (box.isEmpty()) return;
+  const c = box.getCenter(new THREE.Vector3()), r = Math.max(0.15, box.getSize(new THREE.Vector3()).length() / 2);
+  const dir = camera.position.clone().sub(orbit.target).normalize();
+  if (!isFinite(dir.x) || dir.lengthSq() === 0) dir.set(0.5, 0.45, 0.75).normalize();
+  const vfov = THREE.MathUtils.degToRad(camera.fov), hfov = 2 * Math.atan(Math.tan(vfov / 2) * camera.aspect);
+  orbit.target.copy(c);
+  camera.position.copy(c).addScaledVector(dir, r / Math.sin(Math.min(vfov, hfov) / 2) * 1.05);
+}
+function frameAll() {
+  const v = machine.views;
+  camera.position.set(...v.a);
+  orbit.target.set(...v.target);
+  frame(boundsOf(machine.object));
+}
+
+function resize() {
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+resize();
+
+function msg(t) { $('msg').textContent = t; }
+
+const want = new URLSearchParams(location.search).get('m');
+load(MODELS[want] ? want : Object.keys(MODELS)[0]);
+
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  if (playing && !dragging) { machine.update(dt); if (selected) updateBox(); }
+  orbit.update();
+  renderer.render(scene, camera);
+});
+window.__editor = { get machine() { return machine; }, get ops() { return ops; }, select: p => select(nodeAt(machine.object, p)), get selected() { return selected; } };
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "models", "runtimeExecutable": "npx", "runtimeArgs": ["-y", "http-server@14.1.1", "-p", "5181", "-c-1"], "port": 5181, "autoPort": false }
+  ]
+}

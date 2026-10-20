@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mastrox 3D Models</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --text: #0b0b0b; --text-2: #3a3a3a; --divider: rgba(0,0,0,.08); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #d9dde0; color: var(--text);
+    font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; }
+  #app { position: fixed; inset: 0; }
+  .glass {
+    position: absolute; background: rgba(255,255,255,.6); border: 1px solid rgba(255,255,255,.7); border-radius: 14px;
+    box-shadow: inset 0 1px 1px rgba(255,255,255,.9), 0 8px 24px rgba(0,0,0,.12);
+    backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+  #panel { top: 16px; left: 16px; width: 300px; padding: 16px 18px; max-height: calc(100% - 32px); overflow: auto; }
+  select { width: 100%; height: 38px; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,.15);
+    background: rgba(255,255,255,.7); color: var(--text); font: inherit; font-size: 15px; font-weight: 600; }
+  .sub { font-size: 13px; color: var(--text-2); margin: 8px 0 10px; line-height: 1.5; }
+  .row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; font-size: 14px; }
+  .row + .row { border-top: 1px solid var(--divider); }
+  .seg { display: flex; gap: 4px; }
+  button { font: inherit; cursor: pointer; }
+  .tool { height: 30px; padding: 0 10px; border-radius: 8px; border: none; background: transparent; color: var(--text); font-size: 13px; }
+  .tool:hover { background: rgba(0,0,0,.06); }
+  .tool.on, .tool.on:hover { background: #0b0b0b; color: #fff; }
+  .section { font-size: 12px; color: var(--text-2); margin: 14px 0 4px; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 13px; }
+  dt { color: var(--text-2); }
+  dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .note { font-size: 13px; color: var(--text-2); margin: 0 0 10px; line-height: 1.5; }
+  .note b { color: var(--text); font-weight: 500; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #b45309; margin-right: 6px; vertical-align: 1px; }
+  .exp { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .btn2 { height: 34px; border-radius: 8px; font-size: 13px; color: var(--text); text-align: left; padding: 0 10px;
+    background: rgba(255,255,255,.45); border: 1px solid rgba(255,255,255,.8); }
+  .btn2:hover { background: rgba(255,255,255,.7); }
+  .btn2 small { color: var(--text-2); margin-left: 4px; }
+  .btn2:disabled { color: var(--text-2); cursor: progress; }
+  #exp-msg { font-size: 12px; color: var(--text-2); margin: 6px 0 0; min-height: 16px; line-height: 1.4; }
+  a.back { display: inline-block; margin-top: 14px; font-size: 13px; color: var(--text); }
+  .tag { font-size: 12px; font-weight: 500; color: #111; background: rgba(255,255,255,.92); padding: 2px 8px; border-radius: 6px;
+    border: 1px solid #d4d4d8; white-space: nowrap; pointer-events: none; }
+  @media (max-width: 720px) { #panel { width: auto; right: 16px; max-height: 45%; } }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="panel" class="glass">
+  <select id="pick" aria-label="เลือกเครื่อง"></select>
+  <p class="sub" id="info"></p>
+  <p class="note" id="note" hidden></p>
+  <div id="rows"></div>
+  <div class="section">ขนาดโมเดลที่วัดได้ เทียบโบรชัวร์ (mm)</div>
+  <dl id="dims"></dl>
+  <div class="section">Export ไปแก้ไขต่อ (หน่วยเมตร)</div>
+  <div class="exp">
+    <button class="btn2" data-exp="dae">SketchUp <small>.dae</small></button>
+    <button class="btn2" data-exp="obj">OBJ <small>+ .mtl</small></button>
+    <button class="btn2" data-exp="glb">Blender <small>.glb</small></button>
+    <button class="btn2" data-exp="stl">STL <small>.stl</small></button>
+  </div>
+  <p id="exp-msg"></p>
+  <a class="back" href="list.html">← รายการเครื่องทั้งหมด</a>
+  <a class="back" id="edit-link" href="editor.html" style="display:block;margin-top:8px">แก้ไขรุ่นนี้ใน Editor →</a>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { MODELS } from './machines/registry.js';
+import { MACHINES } from './data/machines.js';
+import { toDAE, toOBJ, toSTL, toGLB } from './export.js';
+import { applyEdits, loadEdits, boundsOf } from './edits.js';
+
+const $ = id => document.getElementById(id);
+const app = $('app');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+app.appendChild(renderer.domElement);
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.domElement.style.cssText = 'position:absolute;inset:0;pointer-events:none';
+app.appendChild(labelRenderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#d9dde0');
+const camera = new THREE.PerspectiveCamera(35, 1, 0.05, 100);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.minDistance = 0.8;
+controls.maxDistance = 20;
+
+scene.add(new THREE.HemisphereLight('#ffffff', '#7d8086', 1.4));
+const key = new THREE.DirectionalLight('#ffffff', 2.4);
+key.position.set(3, 6, 4);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4 });
+scene.add(key);
+const fill = new THREE.DirectionalLight('#ffffff', 0.9);
+fill.position.set(-4, 3, -4);
+scene.add(fill);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color: '#c9ccce', roughness: 0.9 }));
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+scene.add(floor);
+const grid = new THREE.GridHelper(12, 24, '#a9adb1', '#bcc0c3');
+grid.position.y = 0.001;
+scene.add(grid);
+
+const byId = Object.fromEntries(MACHINES.map(m => [m.id, m]));
+$('pick').innerHTML = Object.keys(MODELS).map(id => `<option value="${id}">${byId[id]?.name ?? id}</option>`).join('');
+
+let machine = null, labels = [], infoTimer = 0;
+const mm = v => Math.round(v * 1000).toLocaleString('en');
+
+// One on/off row; `fn(true|false)` runs on click.
+function toggleRow(label, onText, offText, initial, fn) {
+  const row = document.createElement('div');
+  row.className = 'row';
+  row.innerHTML = `<span>${label}</span><div class="seg"><button class="tool" data-v="1">${onText}</button><button class="tool" data-v="0">${offText}</button></div>`;
+  const btns = row.querySelectorAll('button');
+  const mark = v => btns.forEach(b => b.classList.toggle('on', (b.dataset.v === '1') === v));
+  btns.forEach(b => b.addEventListener('click', () => { const v = b.dataset.v === '1'; mark(v); fn(v); }));
+  mark(initial);
+  $('rows').appendChild(row);
+}
+
+function load(id) {
+  if (machine) {
+    scene.remove(machine.object);
+    machine.object.traverse(o => { if (o.isCSS2DObject) o.element.remove(); });
+  }
+  machine = MODELS[id]();
+  // Changes saved from editor.html for this machine, if any.
+  const edits = loadEdits(id);
+  applyEdits(machine.object, edits);
+  scene.add(machine.object);
+  history.replaceState(null, '', `?m=${id}`);
+  $('pick').value = id;
+  document.title = `${byId[id]?.name ?? id} 3D`;
+  infoTimer = 0; // refresh the info line on the next frame
+  const note = byId[id]?.modelNote;
+  $('note').hidden = !note && !edits.length;
+  $('note').innerHTML = (note ? `<b><span class="dot"></span>โมเดลยังไม่สมบูรณ์</b><br>${note}` : '')
+    + (edits.length ? `${note ? '<br>' : ''}<b>แก้ไขจาก Editor แล้ว ${edits.length} รายการ</b>` : '');
+  $('edit-link').href = `editor.html?m=${id}`;
+
+  // Measure the machine without its moving workpiece.
+  // (Skipped in place, not detached: some workpieces ride on a moving table or platen.)
+  const bounds = boundsOf(machine.object, machine.workpiece);
+  const size = bounds.getSize(new THREE.Vector3());
+  {
+    // Radius around the view target that covers the machine, for fitting the camera.
+    const t = new THREE.Vector3(...machine.views.target), c = new THREE.Vector3();
+    fitRadius = 0;
+    for (let i = 0; i < 8; i++) fitRadius = Math.max(fitRadius, c.set(i & 1 ? bounds.max.x : bounds.min.x, i & 2 ? bounds.max.y : bounds.min.y, i & 4 ? bounds.max.z : bounds.min.z).distanceTo(t));
+  }
+  const spec = byId[id]?.size;
+  const cell = (v, s) => `${mm(v)}${s ? ` <span style="color:var(--text-2)">/ ${s.toLocaleString('en')}</span>` : ''}`;
+  $('dims').innerHTML = `
+    <dt>ยาว</dt><dd>${cell(size.x, spec?.[0])}</dd>
+    <dt>กว้าง</dt><dd>${cell(size.z, spec?.[1])}</dd>
+    <dt>สูง</dt><dd>${cell(size.y, spec?.[2])}</dd>`;
+
+  labels = (machine.labels || []).map(({ text, at }) => {
+    const el = document.createElement('div');
+    el.className = 'tag';
+    el.textContent = text;
+    const o = new CSS2DObject(el);
+    o.position.set(...at);
+    machine.object.add(o);
+    return o;
+  });
+
+  $('rows').innerHTML = '';
+  const o = machine.open;
+  if (o) toggleRow(o.label, o.on ?? 'เปิด', o.off ?? 'ปิด', o.initial ?? false, v => o.set(v));
+  if (machine.workpiece) toggleRow(machine.pieceLabel ?? 'ชิ้นงาน', 'แสดง', 'ซ่อน', true, v => (machine.workpiece.visible = v));
+  if (labels.length) toggleRow('ป้ายชื่อ', 'แสดง', 'ซ่อน', true, v => labels.forEach(l => (l.visible = v)));
+  toggleRow('มุมกล้อง', 'ด้านหน้า', 'ด้านหลัง', true, v => setView(v ? 'a' : 'b'));
+  setView('a');
+}
+
+// Use the model's camera direction, but back off far enough that the whole machine fits on screen
+// (the hand-set distances crop the bigger machines, especially on narrow windows).
+let fitRadius = 1;
+function setView(which) {
+  const v = machine.views;
+  const target = new THREE.Vector3(...v.target);
+  const pos = new THREE.Vector3(...v[which]);
+  const dir = pos.clone().sub(target);
+  const vfov = THREE.MathUtils.degToRad(camera.fov);
+  const hfov = 2 * Math.atan(Math.tan(vfov / 2) * camera.aspect);
+  const need = fitRadius / Math.sin(Math.min(vfov, hfov) / 2) * 0.82;
+  if (dir.length() < need) dir.setLength(Math.min(need, controls.maxDistance));
+  camera.position.copy(target).add(dir);
+  controls.target.copy(target);
+}
+
+$('pick').addEventListener('change', e => load(e.target.value));
+
+function resize() {
+  renderer.setSize(innerWidth, innerHeight);
+  labelRenderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+resize();
+
+const want = new URLSearchParams(location.search).get('m');
+load(MODELS[want] ? want : 'booster-e6');
+
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  machine.update(dt);
+  infoTimer -= dt;
+  if (infoTimer <= 0) {
+    $('info').textContent = typeof machine.info === 'function' ? machine.info() : machine.info ?? '';
+    infoTimer = 0.25;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+});
+window.__machine = () => machine;
+
+// Export the current machine, posed as it is on screen. OBJ + MTL go out together in a zip.
+const HINT = {
+  dae: 'SketchUp: File → Import → เลือกไฟล์ .dae',
+  obj: 'แตก zip แล้วเปิด .obj (เก็บ .mtl ไว้โฟลเดอร์เดียวกัน)',
+  glb: 'Blender: File → Import → glTF 2.0 (เก็บโลโก้/ตัวหนังสือด้วย)',
+  stl: 'มีแต่รูปทรง ไม่มีสี',
+};
+function save(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+async function loadZip() {
+  if (window.JSZip) return window.JSZip;
+  await new Promise((ok, fail) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    s.onload = ok; s.onerror = () => fail(new Error('โหลด JSZip ไม่ได้'));
+    document.head.appendChild(s);
+  });
+  return window.JSZip;
+}
+async function buildExport(kind) {
+  const id = $('pick').value, title = byId[id]?.name ?? id;
+  const obj = machine.object;
+  if (kind === 'dae') return [new Blob([toDAE(obj, title)], { type: 'model/vnd.collada+xml' }), `${id}.dae`];
+  if (kind === 'stl') return [new Blob([toSTL(obj)], { type: 'model/stl' }), `${id}.stl`];
+  if (kind === 'glb') return [new Blob([await toGLB(obj)], { type: 'model/gltf-binary' }), `${id}.glb`];
+  const { obj: text, mtl } = toOBJ(obj, id);
+  const zip = new (await loadZip())();
+  zip.file(`${id}.obj`, text);
+  zip.file(`${id}.mtl`, mtl);
+  return [await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' }), `${id}-obj.zip`];
+}
+window.__buildExport = buildExport;
+document.querySelectorAll('[data-exp]').forEach(b => b.addEventListener('click', async () => {
+  const kind = b.dataset.exp;
+  b.disabled = true;
+  $('exp-msg').textContent = 'กำลังสร้างไฟล์…';
+  try {
+    const [blob, name] = await buildExport(kind);
+    save(blob, name);
+    $('exp-msg').textContent = `${name} (${(blob.size / 1024 / 1024).toFixed(1)} MB) · ${HINT[kind]}`;
+  } catch (e) {
+    $('exp-msg').textContent = 'สร้างไฟล์ไม่สำเร็จ: ' + e.message;
+  } finally {
+    b.disabled = false;
+  }
+}));
+</script>
+</body>
+</html>

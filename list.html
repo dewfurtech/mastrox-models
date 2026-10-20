@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mastrox Machine List</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fafafa; --card: #ffffff; --line: #d4d4d8; --divider: #e4e4e7;
+    --text: #111111; --text-2: #52525b; --text-3: #71717a; --hover: rgba(0,0,0,.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0b0b0b; --card: #18181b; --line: #3f3f46; --divider: #27272a;
+            --text: #fafafa; --text-2: #a1a1aa; --text-3: #71717a; --hover: rgba(255,255,255,.05); }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans Thai', system-ui, sans-serif;
+    font-size: 15px; line-height: 1.5; }
+  main { max-width: 1080px; margin: 0 auto; padding: 32px 16px 64px; }
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  h1 { font-size: 26px; font-weight: 600; margin: 0; }
+  .sub { color: var(--text-2); font-size: 14px; margin: 4px 0 0; }
+
+  .toolbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 24px; }
+  .search { flex: 1 1 240px; height: 38px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--card); color: var(--text); font: inherit; font-size: 14px; }
+  .search:focus { outline: 2px solid var(--text); outline-offset: 1px; }
+  .seg { display: flex; gap: 4px; flex-wrap: wrap; }
+  .tool { height: 34px; padding: 0 12px; border-radius: 8px; border: none; background: transparent; color: var(--text);
+    font: inherit; font-size: 14px; cursor: pointer; }
+  .tool:hover { background: var(--hover); }
+  .tool.on, .tool.on:hover { background: var(--text); color: var(--card); font-weight: 500; }
+  select { height: 38px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--card);
+    color: var(--text); font: inherit; font-size: 14px; }
+
+  section { margin-bottom: 28px; }
+  h2 { font-size: 17px; font-weight: 600; margin: 0 0 2px; }
+  .h2-sub { color: var(--text-3); font-size: 13px; margin: 0 0 10px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+
+  .item + .item { border-top: 1px solid var(--divider); }
+  .row { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.4fr) 90px 130px 20px; gap: 16px; align-items: center;
+    width: 100%; padding: 14px 20px; border: none; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .row:hover { background: var(--hover); }
+  .name { font-weight: 600; }
+  .meta { color: var(--text-2); font-size: 13px; }
+  .num { font-variant-numeric: tabular-nums; }
+  .size, .weight { color: var(--text-2); font-size: 14px; }
+  .price { text-align: right; font-weight: 600; }
+  .price.none { color: var(--text-3); font-weight: 400; }
+  .chev { color: var(--text-3); transition: transform .15s; }
+  .item.open .chev { transform: rotate(90deg); }
+
+  .detail { display: none; padding: 4px 20px 20px; }
+  .item.open .detail { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 32px; }
+  .detail h3 { font-size: 13px; font-weight: 500; color: var(--text-2); margin: 0 0 6px; }
+  .detail p { margin: 0; font-size: 14px; }
+  ol { margin: 0; padding-left: 22px; font-size: 14px; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 0; font-size: 14px; }
+  dt { color: var(--text-2); }
+  dd { margin: 0; }
+  .note { color: var(--text-2); font-size: 13px; margin-top: 6px; }
+  .full { grid-column: 1 / -1; }
+  .btn { display: inline-flex; align-items: center; height: 38px; padding: 0 16px; border-radius: 8px; font-size: 14px;
+    text-decoration: none; background: var(--card); color: var(--text); border: 1px solid var(--line); }
+  .btn:hover { background: var(--hover); }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #15803d; margin-right: 6px; vertical-align: 1px; }
+  .dot.draft { background: #b45309; }
+  .dot.none { background: #a1a1aa; }
+
+  .empty { color: var(--text-2); padding: 40px 0; text-align: center; }
+  .notes { color: var(--text-2); font-size: 14px; padding-left: 20px; margin: 8px 0 0; }
+
+  @media (max-width: 720px) {
+    .row { grid-template-columns: 1fr auto; gap: 4px 12px; }
+    .row .summary-col, .chev { display: none; }
+    .size { grid-column: 1; }
+    .weight { display: none; }
+    .price { grid-row: 1; grid-column: 2; }
+    .item.open .detail { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Mastrox Machine List</h1>
+      <p class="sub">Furniture Production Lineup 2026 · ข้อมูลจากโบรชัวร์และ lineup V6 · ขนาด ยาว × กว้าง × สูง (mm)</p>
+    </div>
+    <p class="sub" id="count"></p>
+  </header>
+
+  <div class="toolbar">
+    <input class="search" id="q" type="search" placeholder="ค้นหารุ่น สถานี หรือสเปก" aria-label="ค้นหา">
+    <div class="seg" id="cats"></div>
+    <select id="sort" aria-label="เรียงลำดับ">
+      <option value="lineup">เรียงตาม lineup</option>
+      <option value="price-asc">ราคาต่ำ → สูง</option>
+      <option value="price-desc">ราคาสูง → ต่ำ</option>
+      <option value="length">ความยาวเครื่อง</option>
+    </select>
+  </div>
+
+  <div id="list"></div>
+
+  <section>
+    <h2>หมายเหตุ</h2>
+    <ul class="notes" id="notes"></ul>
+  </section>
+</main>
+
+<script type="module">
+import { CATEGORIES, MACHINES, NOTES } from './data/machines.js';
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const baht = n => n == null ? 'ไม่ระบุราคา' : n.toLocaleString('en') + '.-';
+const sizeText = s => s ? s.map(v => v.toLocaleString('en')).join(' × ') : '—';
+
+let cat = 'all', open = new Set();
+try { open = new Set(JSON.parse(sessionStorage.getItem('open') || '[]')); } catch {}
+
+$('cats').innerHTML = [{ id: 'all', name: 'ทั้งหมด' }, ...CATEGORIES]
+  .map(c => `<button class="tool${c.id === 'all' ? ' on' : ''}" data-cat="${c.id}">${esc(c.name)}</button>`).join('');
+$('cats').addEventListener('click', e => {
+  const b = e.target.closest('[data-cat]');
+  if (!b) return;
+  cat = b.dataset.cat;
+  $('cats').querySelectorAll('.tool').forEach(t => t.classList.toggle('on', t === b));
+  render();
+});
+$('q').addEventListener('input', render);
+$('sort').addEventListener('change', render);
+$('notes').innerHTML = NOTES.map(n => `<li>${esc(n)}</li>`).join('');
+
+const haystack = m => [m.name, m.tier, m.kind, m.summary, m.look, ...(m.stations || []),
+  ...Object.entries(m.specs || {}).flat()].join(' ').toLowerCase();
+
+const sorters = {
+  lineup: () => 0,
+  'price-asc': (a, b) => (a.price ?? Infinity) - (b.price ?? Infinity),
+  'price-desc': (a, b) => (b.price ?? -1) - (a.price ?? -1),
+  length: (a, b) => (b.size?.[0] ?? -1) - (a.size?.[0] ?? -1),
+};
+
+function detail(m) {
+  const parts = [];
+  if (m.stations) parts.push(`<div><h3>สถานี (${m.stations.length}) ตามลำดับที่แผ่นวิ่งผ่าน</h3><ol>${m.stations.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>`);
+  if (m.specs) parts.push(`<div><h3>สเปก</h3><dl>${Object.entries(m.specs).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl></div>`);
+  if (m.look) parts.push(`<div class="full"><h3>หน้าตา / จุดที่ต้องปั้น</h3><p>${esc(m.look)}</p></div>`);
+  const foot = [];
+  if (m.modelNote) foot.push(`<p class="note">โมเดลยังไม่สมบูรณ์: ${esc(m.modelNote)}</p>`);
+  if (m.noModel) foot.push(`<p class="note">${esc(m.noModel)}</p>`);
+  if (m.priceNote) foot.push(`<p class="note">ราคา: ${esc(m.priceNote)}</p>`);
+  if (m.model3d) foot.push(`<p style="margin-top:10px"><a class="btn" href="${esc(m.model3d)}">ดูโมเดล 3D</a></p>`);
+  if (foot.length) parts.push(`<div class="full">${foot.join('')}</div>`);
+  return parts.join('');
+}
+
+function row(m) {
+  const status = m.noModel ? '<span class="dot none"></span>ไม่ปั้นโมเดล'
+    : m.modelNote ? '<span class="dot draft"></span>โมเดล 3D (ยังไม่สมบูรณ์)'
+    : m.model3d ? '<span class="dot"></span>มีโมเดล 3D' : '';
+  const sub = [m.tier || m.kind, status].filter(Boolean).join(' · ');
+  return `<div class="item${open.has(m.id) ? ' open' : ''}" data-id="${m.id}">
+    <button class="row" aria-expanded="${open.has(m.id)}">
+      <span><span class="name">${esc(m.name)}</span><br><span class="meta">${sub}</span></span>
+      <span class="meta summary-col">${esc(m.summary || '')}</span>
+      <span class="weight num">${m.weight ? m.weight.toLocaleString('en') + ' kg' : '—'}</span>
+      <span class="price num${m.price == null ? ' none' : ''}">${baht(m.price)}</span>
+      <span class="chev" aria-hidden="true">›</span>
+    </button>
+    <div class="size num" style="padding:0 20px 12px;margin-top:-6px">${m.size ? 'ขนาด ' + sizeText(m.size) + ' mm' : ''}</div>
+    <div class="detail">${detail(m)}</div>
+  </div>`;
+}
+
+function render() {
+  const q = $('q').value.trim().toLowerCase();
+  const items = MACHINES.filter(m => (cat === 'all' || m.cat === cat) && (!q || haystack(m).includes(q)));
+  const sort = sorters[$('sort').value];
+  $('count').textContent = `${items.length} จาก ${MACHINES.length} รุ่น`;
+
+  const html = CATEGORIES.map(c => {
+    const list = items.filter(m => m.cat === c.id).sort(sort);
+    if (!list.length) return '';
+    return `<section><h2>${esc(c.name)}</h2><p class="h2-sub">${esc(c.series)} · ${list.length} รุ่น</p>
+      <div class="card">${list.map(row).join('')}</div></section>`;
+  }).join('');
+  $('list').innerHTML = html || '<p class="empty">ไม่พบรุ่นที่ตรงกับคำค้น</p>';
+}
+
+$('list').addEventListener('click', e => {
+  const btn = e.target.closest('.row');
+  if (!btn) return;
+  const item = btn.parentElement, id = item.dataset.id;
+  const isOpen = item.classList.toggle('open');
+  btn.setAttribute('aria-expanded', isOpen);
+  isOpen ? open.add(id) : open.delete(id);
+  try { sessionStorage.setItem('open', JSON.stringify([...open])); } catch {}
+});
+
+render();
+</script>
+</body>
+</html>
