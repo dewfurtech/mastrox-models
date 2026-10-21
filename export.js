@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { STLExporter } from 'three/addons/exporters/STLExporter.js';
+import { operatorZonesOf } from './machines/lib.js';
 
 // Export a machine model for editing in other programs. Units are meters, Y up.
 //   dae  COLLADA, which SketchUp imports directly (File → Import), with colors
@@ -131,6 +132,30 @@ export function toSTL(root) {
   return new STLExporter().parse(group, { binary: true });
 }
 
-export function toGLB(root) {
-  return new GLTFExporter().parseAsync(root, { binary: true, onlyVisible: true });
+export function toGLB(root, animations = []) {
+  operatorZonesOf(root); // node extras carry the zone's current spot, after any editor moves
+  return new GLTFExporter().parseAsync(root, { binary: true, onlyVisible: true, animations: animations.filter(Boolean) });
+}
+
+// Stats for the export preview: what will actually land in the file.
+export function exportStats(root, kind) {
+  const parts = bake(root, { keepDecals: kind === 'glb' });
+  let tris = 0;
+  for (const p of parts) tris += p.geometry.attributes.position.count / 3;
+  const mats = kind === 'stl' ? 0 : materialTable(parts).length;
+  const box = new THREE.Box3();
+  for (const p of parts) { p.geometry.computeBoundingBox(); box.union(p.geometry.boundingBox); }
+  return { parts: parts.length, tris: Math.round(tris), mats, box };
+}
+
+// The baked meshes as a scene group (how .dae / .obj / .stl will look: no text decals; STL no colors).
+export function bakedPreview(root, kind) {
+  const g = new THREE.Group();
+  const grey = new THREE.MeshStandardMaterial({ color: '#b8bcc0', roughness: 0.6, metalness: 0.1 });
+  for (const p of bake(root, { keepDecals: kind === 'glb' })) {
+    const m = new THREE.Mesh(p.geometry, kind === 'stl' ? grey : p.material);
+    m.castShadow = m.receiveShadow = true;
+    g.add(m);
+  }
+  return g;
 }

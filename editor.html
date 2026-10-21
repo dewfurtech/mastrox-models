@@ -7,59 +7,152 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root { --text: #0b0b0b; --text-2: #3a3a3a; --divider: rgba(0,0,0,.08); --accent: #f07a22; }
+  :root { --text: #0b0b0b; --text-2: #4a4a4a; --divider: rgba(0,0,0,.09); --accent: #f07a22; --tl-h: 190px; }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { margin: 0; height: 100%; overflow: hidden; background: #d9dde0; color: var(--text);
     font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; }
   #app { position: fixed; inset: 0; }
+  #app canvas { display: block; }
   .glass {
-    position: absolute; background: rgba(255,255,255,.72); border: 1px solid rgba(255,255,255,.75); border-radius: 14px;
+    position: absolute; background: rgba(255,255,255,.78); border: 1px solid rgba(255,255,255,.8); border-radius: 14px;
     box-shadow: inset 0 1px 1px rgba(255,255,255,.9), 0 8px 24px rgba(0,0,0,.12);
     backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
   }
-  #left { top: 16px; left: 16px; width: 300px; padding: 14px 16px; max-height: calc(100% - 32px); overflow: auto; }
-  #right { top: 16px; right: 16px; width: 300px; padding: 14px 16px; max-height: calc(100% - 32px); overflow: auto; }
-  #bar { bottom: 16px; left: 50%; transform: translateX(-50%); padding: 6px; display: flex; gap: 4px; align-items: center; }
+  #left { top: 16px; left: 16px; width: 290px; padding: 14px 16px; max-height: calc(100% - var(--tl-h) - 44px); overflow: auto; }
+  #right { top: 16px; right: 16px; width: 300px; padding: 14px 16px; max-height: calc(100% - var(--tl-h) - 44px); overflow: auto; }
+  #rail { top: 16px; left: 318px; padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+  #bar { top: 16px; left: 50%; transform: translateX(-50%); padding: 6px; display: flex; gap: 4px; align-items: center; white-space: nowrap; }
   h2 { font-size: 12px; font-weight: 500; color: var(--text-2); margin: 14px 0 6px; }
   h2:first-child { margin-top: 0; }
-  select, input[type=text], input[type=number] { font: inherit; color: var(--text); border-radius: 8px; border: 1px solid rgba(0,0,0,.15);
-    background: rgba(255,255,255,.8); }
-  select { width: 100%; height: 38px; padding: 0 10px; font-size: 15px; font-weight: 600; }
+  select, input[type=text], input[type=number], input[type=search] { font: inherit; color: var(--text); border-radius: 8px; border: 1px solid rgba(0,0,0,.15);
+    background: rgba(255,255,255,.85); }
+  select { height: 30px; padding: 0 6px; font-size: 13px; }
+  #pick { width: 100%; height: 38px; padding: 0 10px; font-size: 15px; font-weight: 600; }
   input[type=number] { width: 100%; height: 30px; padding: 0 6px; font-size: 13px; font-variant-numeric: tabular-nums; }
-  input[type=text] { width: 100%; height: 30px; padding: 0 8px; font-size: 13px; }
+  input[type=text], input[type=search] { width: 100%; height: 30px; padding: 0 8px; font-size: 13px; }
   button { font: inherit; cursor: pointer; color: var(--text); }
   .tool { height: 32px; min-width: 32px; padding: 0 10px; border-radius: 8px; border: none; background: transparent; font-size: 13px; }
   .tool:hover { background: rgba(0,0,0,.06); }
   .tool.on, .tool.on:hover { background: #0b0b0b; color: #fff; }
   .tool:disabled { opacity: .35; cursor: default; background: transparent; }
+  .tool.primary { background: var(--accent); color: #fff; font-weight: 600; }
+  .tool.primary:hover { background: #d9661a; }
+  .rt { width: 54px; height: 50px; border-radius: 9px; border: none; background: transparent; font-size: 11px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px; padding: 0; position: relative; }
+  .rt svg { width: 20px; height: 20px; }
+  .rt:hover { background: rgba(0,0,0,.06); }
+  .rt.on, .rt.on:hover { background: #0b0b0b; color: #fff; }
+  .rt.add.on { background: var(--accent); }
+  .rt kbd { position: absolute; top: 3px; right: 4px; font-size: 9px; background: none; padding: 0; opacity: .5; }
+  .rt:disabled { opacity: .3; cursor: default; background: transparent; }
+  .hsep { height: 1px; background: var(--divider); margin: 4px 6px; }
   .sep { width: 1px; height: 22px; background: var(--divider); margin: 0 4px; }
   .btn { height: 32px; border-radius: 8px; font-size: 13px; padding: 0 10px; text-align: left;
-    background: rgba(255,255,255,.55); border: 1px solid rgba(0,0,0,.08); }
-  .btn:hover { background: rgba(255,255,255,.9); }
+    background: rgba(255,255,255,.6); border: 1px solid rgba(0,0,0,.08); }
+  .btn:hover { background: rgba(255,255,255,.95); }
   .btn.warn { color: #b42318; }
   .btn:disabled { opacity: .4; cursor: default; }
+  .btn.wide { grid-column: span 2; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
   .xyz { display: grid; grid-template-columns: 52px 1fr 1fr 1fr; gap: 4px; align-items: center; font-size: 12px; margin-bottom: 4px; }
   .xyz span { color: var(--text-2); }
-  .hint { font-size: 12px; color: var(--text-2); line-height: 1.5; margin: 6px 0 0; }
+  .field { font-size: 12px; color: var(--text-2); display: grid; gap: 3px; }
+  .hint { font-size: 12px; color: var(--text-2); line-height: 1.55; margin: 6px 0 0; }
+  .steps { font-size: 12px; color: var(--text-2); line-height: 1.6; margin: 6px 0 0; padding-left: 18px; }
   .sel-name { font-size: 14px; font-weight: 600; word-break: break-all; }
   .sel-meta { font-size: 12px; color: var(--text-2); margin: 2px 0 8px; font-variant-numeric: tabular-nums; }
   .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; margin: 6px 0; }
-  .row label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+  label.ck { display: flex; gap: 6px; align-items: center; cursor: pointer; font-size: 13px; }
   input[type=color] { width: 44px; height: 30px; padding: 0; border: 1px solid rgba(0,0,0,.15); border-radius: 8px; background: none; }
-  #tree { font-size: 12px; max-height: 260px; overflow: auto; border-top: 1px solid var(--divider); padding-top: 4px; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+  .swatches button { width: 22px; height: 22px; border-radius: 6px; border: 1px solid rgba(0,0,0,.2); padding: 0; }
+  .swatches button.on { outline: 2px solid var(--accent); outline-offset: 1px; }
+  #tree { font-size: 12px; max-height: 240px; overflow: auto; border-top: 1px solid var(--divider); padding-top: 4px; margin-top: 6px; }
   #tree div { padding: 2px 4px; border-radius: 6px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #tree div:hover { background: rgba(0,0,0,.05); }
   #tree div.on { background: #0b0b0b; color: #fff; }
   #tree div.off { opacity: .45; text-decoration: line-through; }
-  #log { font-size: 12px; max-height: 150px; overflow: auto; margin: 0; padding-left: 18px; color: var(--text-2); }
-  #msg { font-size: 12px; color: var(--text-2); min-height: 16px; margin: 6px 0 0; line-height: 1.4; }
+  #tree div.new { font-weight: 600; }
+  #log { font-size: 12px; max-height: 120px; overflow: auto; margin: 0; padding-left: 18px; color: var(--text-2); }
+  #saved { font-size: 12px; color: #1f7a3a; min-height: 16px; margin: 6px 0 0; }
   a { color: var(--text); font-size: 13px; }
-  kbd { font: 11px ui-monospace, monospace; background: rgba(0,0,0,.06); border-radius: 4px; padding: 0 4px; }
-  #empty { font-size: 13px; color: var(--text-2); line-height: 1.6; }
+  kbd { font: 11px ui-monospace, monospace; background: rgba(0,0,0,.07); border-radius: 4px; padding: 0 4px; }
+  #empty { font-size: 13px; color: var(--text-2); line-height: 1.7; }
+  #toast { position: absolute; left: 50%; bottom: calc(var(--tl-h) + 32px); transform: translateX(-50%); background: #0b0b0b; color: #fff;
+    font-size: 13px; padding: 7px 14px; border-radius: 10px; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 70%; text-align: center; }
+  #toast.show { opacity: .92; }
+  #guide { top: 64px; left: 50%; transform: translateX(-50%); padding: 7px 12px; font-size: 13px; display: flex; gap: 10px; align-items: center; white-space: nowrap; }
+  #guide b { color: var(--accent); }
+
+  /* Timeline */
+  #timeline { left: 16px; right: 16px; bottom: 16px; padding: 8px 10px 8px; }
+  .tl-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; }
+  .tl-head .grow { flex: 1; }
+  .tl-head input[type=number] { width: 62px; height: 28px; }
+  .tl-head select { height: 28px; }
+  #tl-time { font-variant-numeric: tabular-nums; min-width: 104px; font-weight: 600; }
+  #tl-body { position: relative; margin-top: 6px; max-height: 128px; overflow-y: auto; overflow-x: hidden; user-select: none; }
+  #timeline.min #tl-body, #timeline.min .tl-more { display: none; }
+  .tl-row { display: grid; grid-template-columns: 190px 1fr; align-items: center; height: 24px; }
+  .tl-row + .tl-row { border-top: 1px solid var(--divider); }
+  .tl-name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 6px; cursor: pointer; display: flex; gap: 4px; align-items: center; }
+  .tl-name .x { border: none; background: none; color: #b42318; font-size: 13px; padding: 0 2px; opacity: .55; }
+  .tl-name .x:hover { opacity: 1; }
+  .tl-name span { overflow: hidden; text-overflow: ellipsis; }
+  .tl-row.on .tl-name { font-weight: 600; }
+  .tl-lane { position: relative; height: 100%; background: rgba(0,0,0,.035); border-radius: 4px; cursor: pointer; }
+  .tl-row.on .tl-lane { background: rgba(240,122,34,.10); }
+  .tl-lane.ruler { background: none; cursor: ew-resize; font-size: 10px; color: var(--text-2); }
+  .tick { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(0,0,0,.16); }
+  .tick.minor { top: 14px; background: rgba(0,0,0,.09); }
+  .tick span { position: absolute; top: 0; left: 3px; font-variant-numeric: tabular-nums; }
+  .kf { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; transform: rotate(45deg); background: #3a3a3a;
+    border: 2px solid #fff; border-radius: 2px; cursor: grab; box-shadow: 0 1px 2px rgba(0,0,0,.3); }
+  .kf.step { border-radius: 0; background: #6b6f75; }
+  .kf.linear { background: #2f6fd6; }
+  .kf.on { background: var(--accent); }
+  .tl-empty { font-size: 12px; color: var(--text-2); padding-left: 8px; line-height: 24px; }
+  #playhead { position: absolute; top: 0; width: 2px; margin-left: -1px; background: var(--accent); pointer-events: none; }
+  #playhead::before { content: ''; position: absolute; top: 0; left: -5px; border: 6px solid transparent; border-top-color: var(--accent); }
+
+  /* Export preview */
+  #pv { position: fixed; inset: 0; background: rgba(20,22,24,.55); display: flex; align-items: center; justify-content: center; z-index: 10; }
+  #pv[hidden] { display: none; }
+  .pv-box { position: relative; width: min(1180px, calc(100% - 32px)); height: min(760px, calc(100% - 32px)); display: grid; grid-template-columns: 1fr 320px;
+    overflow: hidden; background: rgba(255,255,255,.94); }
+  #pv-view { position: relative; background: #d9dde0; min-height: 0; }
+  #pv-view canvas { display: block; width: 100%; height: 100%; }
+  #pv-busy { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--text-2); background: rgba(217,221,224,.7); }
+  #pv-viewbar { position: absolute; left: 12px; bottom: 12px; padding: 4px; display: flex; gap: 4px; }
+  .pv-side { padding: 16px 18px; overflow: auto; display: flex; flex-direction: column; }
+  .pv-side h3 { margin: 0 0 2px; font-size: 17px; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .seg button { height: 34px; border-radius: 8px; border: 1px solid rgba(0,0,0,.1); background: rgba(255,255,255,.7); font-size: 12px; padding: 0 6px; }
+  .seg button.on { background: #0b0b0b; color: #fff; border-color: #0b0b0b; }
+  .seg button:disabled { opacity: .35; cursor: default; }
+  .seg button small { opacity: .7; }
+  dl.stats { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; font-size: 13px; margin: 0; font-variant-numeric: tabular-nums; }
+  dl.stats dt { color: var(--text-2); white-space: nowrap; }
+  dl.stats dd { margin: 0; font-weight: 600; text-align: right; white-space: nowrap; }
+  .note { font-size: 12px; line-height: 1.55; color: var(--text-2); background: rgba(0,0,0,.04); border-radius: 8px; padding: 8px 10px; margin-top: 8px; }
+  .pv-actions { margin-top: auto; padding: 12px 0 2px; display: grid; grid-template-columns: 1fr auto; gap: 6px;
+    position: sticky; bottom: -16px; background: rgba(255,255,255,.97); }
+  #pv-msg { min-height: 18px; }
+  .big { height: 42px; border-radius: 10px; border: none; font-size: 15px; font-weight: 600; background: var(--accent); color: #fff; }
+  .big:hover { background: #d9661a; }
+  .big:disabled { opacity: .5; cursor: default; }
+  .big.ghost { background: rgba(0,0,0,.06); color: var(--text); padding: 0 16px; }
+
+  @media (max-width: 1100px) {
+    #left { width: 250px; }
+    #rail { left: 276px; }
+    #right { width: 260px; }
+  }
   @media (max-width: 900px) {
-    #left { width: auto; right: 16px; max-height: 38%; }
-    #right { top: auto; bottom: 70px; left: 16px; width: auto; max-height: 34%; }
+    .tl-row { grid-template-columns: 110px 1fr; }
+    .pv-box { grid-template-columns: 1fr; grid-template-rows: 45% 1fr; }
   }
 </style>
 <script type="importmap">
@@ -74,74 +167,172 @@
 
 <div id="left" class="glass">
   <select id="pick" aria-label="เลือกเครื่อง"></select>
-  <h2>ชิ้นส่วนในโมเดล (คลิกเพื่อเลือก)</h2>
+  <h2>ชิ้นส่วนในโมเดล</h2>
+  <input type="search" id="tree-q" placeholder="ค้นหาชิ้นส่วน…">
   <div id="tree"></div>
-  <h2>การแก้ไขที่บันทึกไว้ของรุ่นนี้</h2>
+  <h2>ประวัติการแก้ไข</h2>
   <ol id="log"></ol>
-  <div class="grid2" style="margin-top:8px">
-    <button class="btn" id="save-file">บันทึกเป็นไฟล์</button>
-    <button class="btn" id="load-file">เปิดไฟล์</button>
-    <button class="btn warn" id="clear">ล้างทั้งหมด</button>
+  <p id="saved"></p>
+  <h2>โปรเจกต์ (การแก้ไข + แอนิเมชัน)</h2>
+  <div class="grid2">
+    <button class="btn" id="save-file" title="Ctrl+S">💾 บันทึกไฟล์</button>
+    <button class="btn" id="load-file">📂 เปิดไฟล์</button>
     <button class="btn" id="view">ดูในหน้าโมเดล</button>
+    <button class="btn warn" id="clear">ล้างทั้งหมด</button>
   </div>
   <input type="file" id="file" accept=".json,application/json" hidden>
-  <h2>Export โมเดลที่แก้แล้ว (หน่วยเมตร)</h2>
-  <div class="grid2">
-    <button class="btn" data-exp="dae">SketchUp .dae</button>
-    <button class="btn" data-exp="obj">OBJ + .mtl</button>
-    <button class="btn" data-exp="glb">Blender .glb</button>
-    <button class="btn" data-exp="stl">STL .stl</button>
-  </div>
-  <p id="msg"></p>
-  <p class="hint">การแก้ไขบันทึกอัตโนมัติในเบราว์เซอร์นี้ และหน้าโมเดล (index.html) จะแสดงตามที่แก้ ใช้ “บันทึกเป็นไฟล์” เพื่อเก็บสำรองหรือส่งต่อ<br>
+  <p class="hint">บันทึกอัตโนมัติในเบราว์เซอร์นี้ทุกครั้งที่แก้ ใช้ “บันทึกไฟล์” เพื่อเก็บสำรองหรือส่งต่อเครื่องอื่น<br>
   <a href="index.html" id="back">← กลับหน้าดูโมเดล</a></p>
 </div>
 
+<div id="rail" class="glass" role="toolbar" aria-label="เครื่องมือ">
+  <button class="rt on" data-tool="select" title="เลือก/ย้ายชิ้นส่วน (V)"><kbd>V</kbd>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 3l14 8-6 1.5L9.5 19z"/></svg>เลือก</button>
+  <button class="rt add" data-tool="box" title="สร้างกล่อง: คลิกหรือลากบนพื้น/ผิวชิ้นงาน (B)"><kbd>B</kbd>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/></svg>กล่อง</button>
+  <button class="rt add" data-tool="pipe" title="ลากท่อ: คลิกทีละจุด Enter เพื่อจบ (T)"><kbd>T</kbd>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V11a4 4 0 0 1 4-4h12"/></svg>ท่อ</button>
+  <button class="rt add" data-tool="wire" title="ลากสายไฟ: คลิกทีละจุด Enter เพื่อจบ (L)"><kbd>L</kbd>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 7c4 0 4 10 9 10s5-10 9-10"/><circle cx="3" cy="7" r="1.6"/><circle cx="21" cy="7" r="1.6"/></svg>สายไฟ</button>
+  <div class="hsep"></div>
+  <button class="rt on" data-mode="translate" title="ย้าย (W)"><kbd>W</kbd>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></svg>ย้าย</button>
+  <button class="rt" data-mode="rotate" title="หมุน (E)"><kbd>E</kbd>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v4h-4"/></svg>หมุน</button>
+  <button class="rt" data-mode="scale" title="ย่อ/ขยาย (R)"><kbd>R</kbd>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="11" width="10" height="10" rx="1"/><path d="M13 11V5h6v6h-6M16 8l5-5M17 3h4v4"/></svg>สเกล</button>
+</div>
+
+<div id="bar" class="glass">
+  <button class="tool" id="space" title="แกนของโลก / แกนของชิ้น">แกน: โลก</button>
+  <button class="tool on" id="snap" title="ขยับทีละ 10 mm / 5°">Snap 10 mm</button>
+  <button class="tool on" id="glass" title="คลิกทะลุกระจก/ฝาโปร่งใส">ทะลุกระจก</button>
+  <div class="sep"></div>
+  <button class="tool" id="undo" title="ย้อน (Ctrl+Z)">↶ ย้อน</button>
+  <button class="tool" id="redo" title="ทำซ้ำ (Ctrl+Y)">↷</button>
+  <div class="sep"></div>
+  <button class="tool" id="save-btn" title="บันทึกโปรเจกต์เป็นไฟล์ (Ctrl+S)">💾 บันทึก</button>
+  <button class="tool primary" id="export-btn" title="ดูตัวอย่างก่อน Export (Ctrl+E)">ตรวจ &amp; Export</button>
+</div>
+
+<div id="guide" class="glass" hidden></div>
+
 <div id="right" class="glass">
-  <div id="empty">คลิกที่ชิ้นส่วนในโมเดลเพื่อเลือก<br>
+  <div id="empty">
+    <b style="color:var(--text)">เริ่มต้น</b><br>
+    คลิกชิ้นส่วนในโมเดลเพื่อเลือก แล้วลากลูกศรเพื่อย้าย<br>
+    หรือเลือกเครื่องมือทางซ้าย: <b>กล่อง</b> · <b>ท่อ</b> · <b>สายไฟ</b>
+    <h2>ทางลัด</h2>
+    <kbd>V</kbd> เลือก · <kbd>B</kbd> กล่อง · <kbd>T</kbd> ท่อ · <kbd>L</kbd> สายไฟ<br>
     <kbd>W</kbd> ย้าย · <kbd>E</kbd> หมุน · <kbd>R</kbd> ย่อ/ขยาย<br>
-    <kbd>Alt</kbd>+คลิก หรือ <kbd>P</kbd> เลือกทั้งกลุ่ม · <kbd>Del</kbd> ลบ · <kbd>H</kbd> ซ่อน<br>
-    <kbd>Ctrl+D</kbd> ทำซ้ำ · <kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd> ย้อน/ทำซ้ำ<br>
-    <kbd>Esc</kbd> ยกเลิกเลือก · <kbd>F</kbd> ซูมไปที่ชิ้นที่เลือก</div>
+    <kbd>Alt</kbd>+คลิก หรือ <kbd>P</kbd> เลือกทั้งกลุ่ม · <kbd>F</kbd> ซูมไปที่ชิ้น<br>
+    <kbd>Del</kbd> ลบ · <kbd>H</kbd> ซ่อน · <kbd>Ctrl+D</kbd> ทำซ้ำ<br>
+    <kbd>K</kbd> ใส่คีย์เฟรม · <kbd>Space</kbd> เล่น/หยุด · <kbd>←</kbd><kbd>→</kbd> เลื่อนเวลา<br>
+    <kbd>Ctrl+Z</kbd> ย้อน · <kbd>Ctrl+S</kbd> บันทึกไฟล์ · <kbd>Ctrl+E</kbd> Export
+    <h2>ทำแอนิเมชัน</h2>
+    <ol class="steps" style="padding-left:16px;margin:0">
+      <li>เลือกชิ้น แล้วกด <kbd>K</kbd> ที่เวลา 0 s</li>
+      <li>คลิกบนแถบเวลาด้านล่างเพื่อไปเวลาอื่น</li>
+      <li>ย้าย/หมุนชิ้น ระบบใส่คีย์ให้เอง</li>
+      <li>กด <kbd>Space</kbd> เพื่อดู</li>
+    </ol>
+  </div>
+
+  <div id="tool-opts" hidden></div>
+
   <div id="insp" hidden>
     <div class="sel-name" id="sel-name"></div>
     <div class="sel-meta" id="sel-meta"></div>
     <div class="row"><input type="text" id="name" placeholder="ตั้งชื่อชิ้นส่วน"></div>
-    <h2>ตำแหน่ง (mm, เทียบกลุ่มแม่)</h2>
+    <div id="added-opts"></div>
+    <h2 id="xf-title">ตำแหน่ง (mm, เทียบกลุ่มแม่)</h2>
     <div class="xyz"><span></span><span>X</span><span>Y</span><span>Z</span></div>
     <div class="xyz"><span>ย้าย</span><input type="number" step="1" data-k="p0"><input type="number" step="1" data-k="p1"><input type="number" step="1" data-k="p2"></div>
     <div class="xyz"><span>หมุน (°)</span><input type="number" step="1" data-k="r0"><input type="number" step="1" data-k="r1"><input type="number" step="1" data-k="r2"></div>
     <div class="xyz"><span>สเกล</span><input type="number" step="0.01" data-k="s0"><input type="number" step="0.01" data-k="s1"><input type="number" step="0.01" data-k="s2"></div>
+    <p class="hint" id="key-hint" hidden></p>
     <h2>สี</h2>
     <div class="row">
       <input type="color" id="color">
-      <label><input type="checkbox" id="same-mat"> ทุกชิ้นที่ใช้วัสดุเดียวกัน</label>
+      <label class="ck" id="same-mat-l"><input type="checkbox" id="same-mat"> ทุกชิ้นที่ใช้วัสดุเดียวกัน</label>
     </div>
+    <div class="swatches" id="sel-swatches"></div>
     <h2>จัดการ</h2>
     <div class="grid2">
       <button class="btn" id="parent">↑ เลือกกลุ่มแม่</button>
       <button class="btn" id="hide">ซ่อน</button>
       <button class="btn" id="dup">ทำซ้ำ</button>
       <button class="btn warn" id="del">ลบ</button>
-      <button class="btn" id="reset" style="grid-column: span 2">คืนค่าตำแหน่งเดิมของชิ้นนี้</button>
+      <button class="btn wide" id="reset">คืนค่าตำแหน่งเดิมของชิ้นนี้</button>
     </div>
-    <p class="hint" id="anim-hint" hidden>ชิ้นนี้ขยับตามแอนิเมชัน ถ้ากดเล่น ตำแหน่งที่แก้อาจถูกแอนิเมชันเขียนทับ</p>
+    <p class="hint" id="anim-hint" hidden>ชิ้นนี้ขยับตามการเคลื่อนไหวเดิมของเครื่อง ถ้าเปิด “การเคลื่อนไหวเดิม” ตอนเล่น ตำแหน่งที่แก้อาจถูกเขียนทับ</p>
   </div>
 </div>
 
-<div id="bar" class="glass">
-  <button class="tool on" data-mode="translate" title="ย้าย (W)">ย้าย</button>
-  <button class="tool" data-mode="rotate" title="หมุน (E)">หมุน</button>
-  <button class="tool" data-mode="scale" title="ย่อ/ขยาย (R)">สเกล</button>
-  <div class="sep"></div>
-  <button class="tool" id="space" title="แกนของโลก / แกนของชิ้น">แกน: โลก</button>
-  <button class="tool on" id="snap" title="ขยับทีละ 10 mm / 5°">Snap</button>
-  <button class="tool on" id="glass" title="คลิกทะลุกระจก/ฝาโปร่งใส">ทะลุกระจก</button>
-  <div class="sep"></div>
-  <button class="tool" id="undo" title="ย้อน (Ctrl+Z)">↶</button>
-  <button class="tool" id="redo" title="ทำซ้ำ (Ctrl+Y)">↷</button>
-  <div class="sep"></div>
-  <button class="tool" id="play" title="เล่น/หยุดแอนิเมชัน">▶ เล่น</button>
+<div id="toast"></div>
+
+<div id="timeline" class="glass">
+  <div class="tl-head">
+    <button class="tool" id="tl-start" title="กลับไปเริ่ม (Home)">⏮</button>
+    <button class="tool" id="tl-play" title="เล่น/หยุด (Space)">▶ เล่น</button>
+    <span id="tl-time">0.00 / 5.00 s</span>
+    <div class="sep"></div>
+    <button class="tool" id="addkey" title="ใส่คีย์เฟรมของชิ้นที่เลือก ณ เวลานี้ (K)">◆ ใส่คีย์ <kbd>K</kbd></button>
+    <span class="tl-more" id="key-edit" hidden>
+      ช่วงถัดไป <select id="key-ease" title="ลักษณะการเคลื่อนจากคีย์นี้ไปคีย์ถัดไป"></select>
+      <button class="tool" id="key-del" title="ลบคีย์ที่เลือก (Del)">ลบคีย์</button>
+    </span>
+    <span class="grow"></span>
+    <label class="ck tl-more" title="เล่นการเคลื่อนไหวที่มากับโมเดล (หัวเจาะ สายพาน ฯลฯ) ไปพร้อมกัน"><input type="checkbox" id="tl-builtin"> การเคลื่อนไหวเดิม</label>
+    <label class="ck tl-more"><input type="checkbox" id="tl-loop" checked> วนซ้ำ</label>
+    <span class="tl-more">ความยาว <input type="number" id="tl-dur" min="0.5" max="600" step="0.5"> s</span>
+    <span class="tl-more">ความเร็ว <select id="tl-speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></span>
+    <button class="tool" id="tl-min" title="ย่อ/ขยายแถบเวลา">▾</button>
+  </div>
+  <div id="tl-body">
+    <div class="tl-row"><div class="tl-name" style="cursor:default;color:var(--text-2)">ชิ้นส่วน / เวลา</div><div class="tl-lane ruler" id="ruler"></div></div>
+    <div id="tl-rows"></div>
+    <div id="playhead"></div>
+  </div>
+</div>
+
+<div id="pv" hidden>
+  <div class="pv-box glass" role="dialog" aria-label="ตรวจก่อน Export">
+    <div id="pv-view">
+      <div id="pv-busy">กำลังเตรียม…</div>
+      <div id="pv-viewbar" class="glass">
+        <button class="tool on" id="pv-spin">หมุนรอบ</button>
+        <button class="tool" id="pv-play" hidden>▶ เล่นแอนิเมชัน</button>
+      </div>
+    </div>
+    <div class="pv-side">
+      <h3>ตรวจก่อน Export</h3>
+      <div class="hint" style="margin:0 0 8px" id="pv-sub"></div>
+      <h2>รูปแบบไฟล์</h2>
+      <div class="seg" id="pv-fmt">
+        <button data-v="dae">SketchUp <small>.dae</small></button>
+        <button data-v="glb">Blender <small>.glb</small></button>
+        <button data-v="obj">OBJ <small>+ .mtl</small></button>
+        <button data-v="stl">STL <small>.stl</small></button>
+      </div>
+      <div class="note" id="pv-note"></div>
+      <h2>รายละเอียด</h2>
+      <div class="seg" id="pv-lod"><button data-v="high">เต็ม</button><button data-v="low">Low poly</button></div>
+      <h2>ท่าของโมเดล</h2>
+      <div class="seg" id="pv-pose"><button data-v="zero">ที่ 0 s</button><button data-v="now">ที่เวลาปัจจุบัน</button></div>
+      <h2>รวมในไฟล์</h2>
+      <label class="ck"><input type="checkbox" id="pv-anim" checked> แอนิเมชันคีย์เฟรม (.glb เท่านั้น)</label>
+      <label class="ck"><input type="checkbox" id="pv-zones" checked> จุดยืนทำงาน (แผ่นเหลือง)</label>
+      <label class="ck"><input type="checkbox" id="pv-piece" checked> ชิ้นงาน/แผ่นไม้บนเครื่อง</label>
+      <h2>สิ่งที่จะอยู่ในไฟล์</h2>
+      <dl class="stats" id="pv-stats"></dl>
+      <div class="pv-actions">
+        <button class="big" id="pv-go">Export ไฟล์</button>
+        <button class="big ghost" id="pv-close">ปิด</button>
+        <p class="hint" id="pv-msg" style="grid-column:span 2;margin:0"></p>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script type="module">
@@ -150,11 +341,16 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { MODELS } from './machines/registry.js';
 import { MACHINES } from './data/machines.js';
-import { toDAE, toOBJ, toSTL, toGLB } from './export.js';
-import { pathOf, nodeAt, applyOp, applyEdits, loadEdits, saveEdits, boundsOf } from './edits.js';
+import { toDAE, toOBJ, toSTL, toGLB, exportStats, bakedPreview } from './export.js';
+import { pathOf, nodeAt, applyOp, applyEdits, loadEdits, saveEdits, boundsOf, makeAdded, updateAdded, ADD_DEFAULTS, ADD_NAMES } from './edits.js';
+import { loadAnim, saveAnim, emptyAnim, hasKeys, poseAt, keyOf, setKey, toClip, EASES } from './anim.js';
+import { lowPolyMachine } from './lowpoly.js';
 
 const $ = id => document.getElementById(id);
 const DEG = 180 / Math.PI;
+const mm = v => Math.round(v * 1000);
+const r4 = v => +v.toFixed(4);
+const SWATCHES = ['#9aa3ab', '#d8dbde', '#3b3e43', '#1b1b1b', '#f07a22', '#f2c218', '#2bb34a', '#d42a1f', '#2f6fd6', '#f2f2f0', '#8a5a32'];
 
 // ---------- Scene (same look as the viewer) ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -163,31 +359,36 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 $('app').appendChild(renderer.domElement);
+const canvas = renderer.domElement;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#d9dde0');
 const camera = new THREE.PerspectiveCamera(35, 1, 0.02, 200);
-const orbit = new OrbitControls(camera, renderer.domElement);
+const orbit = new OrbitControls(camera, canvas);
 orbit.enableDamping = true;
 orbit.maxDistance = 40;
-scene.add(new THREE.HemisphereLight('#ffffff', '#7d8086', 1.4));
-const key = new THREE.DirectionalLight('#ffffff', 2.4);
-key.position.set(3, 6, 4);
-key.castShadow = true;
-key.shadow.mapSize.set(2048, 2048);
-Object.assign(key.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6 });
-scene.add(key);
-const fill = new THREE.DirectionalLight('#ffffff', 0.9);
-fill.position.set(-4, 3, -4);
-scene.add(fill);
-const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: '#c9ccce', roughness: 0.9 }));
-floor.rotation.x = -Math.PI / 2;
-floor.receiveShadow = true;
-scene.add(floor);
-const grid = new THREE.GridHelper(20, 40, '#a9adb1', '#bcc0c3');
-grid.position.y = 0.001;
-scene.add(grid);
+function addLights(s) {
+  s.add(new THREE.HemisphereLight('#ffffff', '#7d8086', 1.4));
+  const key = new THREE.DirectionalLight('#ffffff', 2.4);
+  key.position.set(3, 6, 4);
+  key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048);
+  Object.assign(key.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6 });
+  s.add(key);
+  const fill = new THREE.DirectionalLight('#ffffff', 0.9);
+  fill.position.set(-4, 3, -4);
+  s.add(fill);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: '#c9ccce', roughness: 0.9 }));
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  s.add(floor);
+  const grid = new THREE.GridHelper(20, 40, '#a9adb1', '#bcc0c3');
+  grid.position.y = 0.001;
+  s.add(grid);
+  return floor;
+}
+const floor = addLights(scene);
 
-const tc = new TransformControls(camera, renderer.domElement);
+const tc = new TransformControls(camera, canvas);
 const tcHelper = tc.getHelper ? tc.getHelper() : tc; // r169+ keeps the gizmo in a helper object
 scene.add(tcHelper);
 tc.setTranslationSnap(0.01);
@@ -195,10 +396,14 @@ tc.setRotationSnap(THREE.MathUtils.degToRad(5));
 tc.setScaleSnap(0.05);
 tc.addEventListener('dragging-changed', e => {
   orbit.enabled = !e.value;
-  if (!e.value && selected) commitXform();
+  if (!e.value) { if (handleSel) commitHandle(); else if (selected) commitXform(); }
   if (e.value) dragging = true; else setTimeout(() => (dragging = false), 0);
 });
-tc.addEventListener('objectChange', () => { fillInspector(); updateBox(); });
+tc.addEventListener('objectChange', () => {
+  if (handleSel) livePoints();
+  else { fillInspector(); placeHandles(); }
+  updateBox();
+});
 
 const selBox = new THREE.Box3Helper(new THREE.Box3(), 0xf07a22);
 selBox.visible = false;
@@ -207,20 +412,34 @@ scene.add(selBox);
 // ---------- State ----------
 const byId = Object.fromEntries(MACHINES.map(m => [m.id, m]));
 $('pick').innerHTML = Object.keys(MODELS).map(id => `<option value="${id}">${byId[id]?.name ?? id}</option>`).join('');
-let id = null, machine = null, ops = [], redo = [], selected = null, selPath = null, playing = false, dragging = false;
-let animated = new Set(); // paths of nodes the model's animation moves
+let id = null, machine = null, ops = [], anim = emptyAnim(), selected = null, selPath = null, dragging = false;
+let undoStack = [], redoStack = [];
+let tool = 'select', mode = 'translate';
+let time = 0, playing = false, builtinRan = false, selKey = null;
+let animated = new Set(); // paths of nodes the model's own animation moves
+const toolOpts = {
+  box: { ...ADD_DEFAULTS.box },
+  pipe: { ...ADD_DEFAULTS.pipe, lift: 0, ortho: true },
+  wire: { ...ADD_DEFAULTS.wire, lift: 0, ortho: false },
+};
 
 function build() {
-  // Fresh model, then replay the edits. Used on load, undo and redo.
+  // Fresh model, then replay the edits and pose it at the current time. Used on load, undo and redo.
   if (machine) scene.remove(machine.object);
   machine = MODELS[id]();
   applyEdits(machine.object, ops);
   scene.add(machine.object);
+  builtinRan = false;
+  applyPose();
   machine.object.updateMatrixWorld(true);
-  if (selPath != null) select(nodeAt(machine.object, selPath), false); else select(null, false);
+  const keep = selPath;
+  select(keep != null ? nodeAt(machine.object, keep) : null, false);
   buildTree();
   renderLog();
+  renderTimeline();
 }
+
+function applyPose() { if (machine && hasKeys(anim)) poseAt(machine.object, anim, time); }
 
 function findAnimated() {
   // Run a throw-away copy for a while and see which nodes move.
@@ -235,28 +454,64 @@ function findAnimated() {
 }
 
 function load(newId) {
+  cancelDraft();
+  stop();
   id = newId;
   $('pick').value = id;
   history.replaceState(null, '', `?m=${id}`);
   document.title = `แก้ไข ${byId[id]?.name ?? id}`;
   $('back').href = `index.html?m=${id}`;
   ops = loadEdits(id);
-  redo = [];
-  selPath = null;
+  anim = loadAnim(id);
+  undoStack = []; redoStack = [];
+  selPath = null; selKey = null; time = 0;
+  $('tl-dur').value = anim.duration;
+  $('tl-loop').checked = anim.loop !== false;
   build();
   findAnimated();
   frameAll();
+  $('saved').textContent = ops.length || hasKeys(anim) ? `มีการแก้ไขที่บันทึกไว้ ${ops.length} รายการ · คีย์เฟรม ${keyCount()} คีย์` : '';
 }
+
+const keyCount = () => Object.values(anim.tracks).reduce((n, k) => n + k.length, 0);
 
 function persist() {
-  if (!saveEdits(id, ops)) msg('บันทึกในเบราว์เซอร์ไม่ได้ (storage ถูกปิด) ใช้ “บันทึกเป็นไฟล์” แทน');
+  const ok = saveEdits(id, ops) & saveAnim(id, anim);
+  const t = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  $('saved').textContent = ok ? `✓ บันทึกอัตโนมัติแล้ว ${t}` : '';
+  if (!ok) toast('บันทึกในเบราว์เซอร์ไม่ได้ (storage ถูกปิด) ใช้ “บันทึกไฟล์” แทน');
 }
 
-function push(op, rebuild = false) {
-  ops.push(op);
-  redo = [];
-  if (rebuild) build(); else { applyOp(machine.object, op); buildTree(); renderLog(); }
+// Undo works on whole snapshots of the edits + animation, so every kind of change undoes the same way.
+const state = () => JSON.stringify({ ops, anim });
+function checkpoint() {
+  undoStack.push(state());
+  if (undoStack.length > 200) undoStack.shift();
+  redoStack = [];
+}
+function restore(s) {
+  ({ ops, anim } = JSON.parse(s));
+  selKey = null;
+  $('tl-dur').value = anim.duration;
+  $('tl-loop').checked = anim.loop !== false;
+  build();
   persist();
+}
+function undo() { if (!undoStack.length) return; redoStack.push(state()); restore(undoStack.pop()); toast('ย้อนแล้ว'); }
+function redoOp() { if (!redoStack.length) return; undoStack.push(state()); restore(redoStack.pop()); }
+
+function push(op, rebuild = false) {
+  checkpoint();
+  ops.push(op);
+  if (rebuild) build(); else { applyOp(machine.object, op); applyPose(); buildTree(); renderLog(); }
+  persist();
+}
+
+function animEdit(fn, rebuild = false) {
+  checkpoint();
+  fn();
+  persist();
+  if (rebuild) build(); else { applyPose(); renderTimeline(); renderLog(); }
 }
 
 // ---------- Selection ----------
@@ -264,12 +519,26 @@ function select(o, rebuildTree = true) {
   if (o === machine?.object) o = null;
   selected = o || null;
   selPath = selected ? pathOf(machine.object, selected) : null;
-  if (selected) tc.attach(selected); else tc.detach();
-  $('insp').hidden = !selected;
-  $('empty').hidden = !!selected;
-  if (selected) fillInspector();
+  handleSel = null;
+  attachGizmo();
+  placeHandles(true);
+  showPanel();
   updateBox();
-  if (rebuildTree) markTree();
+  if (rebuildTree) { markTree(); renderTimeline(); }
+}
+
+function attachGizmo() {
+  const target = tool === 'select' ? handleSel ?? selected : null;
+  if (target) { tc.attach(target); tc.setMode(handleSel ? 'translate' : mode); } else tc.detach();
+}
+
+function showPanel() {
+  const creating = tool !== 'select';
+  $('tool-opts').hidden = !creating;
+  $('insp').hidden = creating || !selected;
+  $('empty').hidden = creating || !!selected;
+  if (creating) renderToolOpts();
+  else if (selected) fillInspector(true);
 }
 
 function updateBox() {
@@ -280,30 +549,90 @@ function updateBox() {
 }
 
 function label(o) {
-  const kind = o.isInstancedMesh ? `ชุดซ้ำ ×${o.count}` : o.isMesh ? ({ BoxGeometry: 'กล่อง', CylinderGeometry: 'ทรงกระบอก', TubeGeometry: 'ท่อ',
+  if (!o) return '(ไม่พบชิ้น)';
+  const a = o.userData.added;
+  const kind = a ? ADD_NAMES[a.kind] : o.isInstancedMesh ? `ชุดซ้ำ ×${o.count}` : o.isMesh ? ({ BoxGeometry: 'กล่อง', CylinderGeometry: 'ทรงกระบอก', TubeGeometry: 'ท่อ',
     TorusGeometry: 'วงแหวน', PlaneGeometry: 'แผ่นป้าย', ShapeGeometry: 'รูปทรง', ExtrudeGeometry: 'ทรงอัด' }[o.geometry.type] ?? o.geometry.type)
     : o.isLight ? 'ไฟ' : o.isGroup ? `กลุ่ม (${o.children.length})` : o.type;
-  return o.name ? `${o.name} · ${kind}` : kind;
+  return o.name && o.name !== kind ? `${o.name} · ${kind}` : kind;
 }
 
-function fillInspector() {
+const tracked = path => !!anim.tracks[path]?.length;
+
+function fillInspector(full = false) {
   if (!selected) return;
-  const o = selected;
-  $('sel-name').textContent = label(o);
+  const o = selected, a = o.userData.added;
+  $('sel-name').textContent = (a ? '✚ ' : '') + label(o);
   const size = boundsOf(o).getSize(new THREE.Vector3());
-  const col = colorOf(o);
-  $('sel-meta').textContent = `path ${selPath} · ขนาด ${Math.round(size.x * 1000)} × ${Math.round(size.y * 1000)} × ${Math.round(size.z * 1000)} mm` + (o === machine.workpiece ? ' · ชิ้นงาน' : '');
-  $('name').value = o.name || '';
+  $('sel-meta').textContent = `ขนาด ${mm(size.x)} × ${mm(size.y)} × ${mm(size.z)} mm` + (o === machine.workpiece ? ' · ชิ้นงาน' : '') + (a ? ' · สร้างเอง' : '');
+  if (full) {
+    $('name').value = o.name || '';
+    renderAddedOpts();
+  }
   const v = { p: o.position.toArray().map(x => x * 1000), r: [o.rotation.x, o.rotation.y, o.rotation.z].map(x => x * DEG), s: o.scale.toArray() };
   document.querySelectorAll('#insp input[data-k]').forEach(inp => {
     if (document.activeElement === inp) return;
     const [k, i] = [inp.dataset.k[0], +inp.dataset.k[1]];
     inp.value = k === 's' ? +v[k][i].toFixed(3) : +v[k][i].toFixed(1);
   });
+  const col = a ? a.color : colorOf(o);
   $('color').disabled = !col;
   if (col) $('color').value = col;
+  $('same-mat-l').hidden = !!a;
+  $('sel-swatches').innerHTML = col ? SWATCHES.map(c => `<button style="background:${c}" data-c="${c}" class="${c === col ? 'on' : ''}" title="${c}"></button>`).join('') : '';
   $('hide').textContent = o.userData.hidden ? 'แสดง' : 'ซ่อน';
   $('anim-hint').hidden = !isAnimated(selPath);
+  const t = tracked(selPath);
+  $('key-hint').hidden = !t;
+  $('key-hint').innerHTML = t ? `<b style="color:var(--accent)">◆ มีคีย์เฟรม ${anim.tracks[selPath].length} คีย์</b> แก้ตำแหน่งตอนนี้ = ใส่/แก้คีย์ที่ ${time.toFixed(2)} s` : '';
+  $('reset').hidden = !!a;
+}
+
+function renderAddedOpts() {
+  const a = selected?.userData.added, el = $('added-opts');
+  if (!a) { el.innerHTML = ''; return; }
+  if (a.kind === 'box') {
+    el.innerHTML = `<h2>ขนาดกล่อง (mm)</h2><div class="grid3">
+      <label class="field">กว้าง X<input type="number" min="1" step="10" data-a="w" value="${mm(a.w)}"></label>
+      <label class="field">สูง Y<input type="number" min="1" step="10" data-a="h" value="${mm(a.h)}"></label>
+      <label class="field">ลึก Z<input type="number" min="1" step="10" data-a="d" value="${mm(a.d)}"></label></div>`;
+  } else {
+    el.innerHTML = `<h2>${a.kind === 'pipe' ? 'ท่อ' : 'สายไฟ'} · ${a.points.length} จุด</h2><div class="grid2">
+      <label class="field">เส้นผ่านศูนย์กลาง (mm)<input type="number" min="1" step="1" data-a="radius" value="${mm(a.radius * 2)}"></label>
+      ${a.kind === 'wire' ? `<label class="field">หย่อน (%)<input type="number" min="0" max="40" step="1" data-a="sag" value="${Math.round((a.sag ?? 0) * 100)}"></label>`
+        : `<label class="ck" style="align-self:end;height:30px"><input type="checkbox" data-a="flange" ${a.flange ? 'checked' : ''}> หน้าแปลนปลายท่อ</label>`}
+      </div>
+      <p class="hint">ลากจุดสีส้มบนเส้นเพื่อแก้แนว คลิกจุดแล้วกด <kbd>Del</kbd> เพื่อลบจุด</p>
+      <div class="grid2" style="margin-top:6px">
+        <button class="btn" id="pt-add">+ ต่อจุดท้าย</button>
+        <button class="btn" id="pt-rev">กลับหัว-ท้าย</button>
+      </div>`;
+    $('pt-add').onclick = () => {
+      const p = a.points.map(q => new THREE.Vector3(...q));
+      const last = p[p.length - 1], dir = last.clone().sub(p[p.length - 2]).normalize();
+      editPoints([...a.points, last.clone().addScaledVector(dir, 0.3).toArray().map(r4)]);
+    };
+    $('pt-rev').onclick = () => editPoints([...a.points].reverse());
+  }
+  el.querySelectorAll('[data-a]').forEach(inp => inp.addEventListener('change', () => {
+    const k = inp.dataset.a;
+    let v = inp.type === 'checkbox' ? inp.checked : +inp.value;
+    if (inp.type !== 'checkbox' && !(v > 0) && k !== 'sag') return fillInspector(true);
+    if (k === 'radius') v = v / 2000;
+    else if (k === 'sag') v = Math.max(0, v) / 100;
+    else if (k !== 'flange') v = v / 1000;
+    push({ type: 'params', path: selPath, spec: { [k]: v } });
+    placeHandles(true);
+    fillInspector(true);
+    updateBox();
+  }));
+}
+
+function editPoints(points) {
+  push({ type: 'params', path: selPath, spec: { points } });
+  placeHandles(true);
+  fillInspector(true);
+  updateBox();
 }
 
 function isAnimated(path) {
@@ -317,9 +646,18 @@ function colorOf(o) {
   return c;
 }
 
+// A moved part: parts with keyframes get a key at the current time, others get a plain edit.
 function commitXform() {
   const o = selected;
-  push({ type: 'xform', path: selPath, p: o.position.toArray(), r: [o.rotation.x, o.rotation.y, o.rotation.z], s: o.scale.toArray() });
+  if (tracked(selPath)) {
+    animEdit(() => setKey(anim, selPath, keyOf(o, time)));
+    selKey = { path: selPath, t: +time.toFixed(3) };
+    renderTimeline();
+    toast(`◆ ใส่คีย์ที่ ${time.toFixed(2)} s`);
+  } else {
+    push({ type: 'xform', path: selPath, p: o.position.toArray(), r: [o.rotation.x, o.rotation.y, o.rotation.z], s: o.scale.toArray() });
+  }
+  fillInspector();
 }
 
 document.querySelectorAll('#insp input[data-k]').forEach(inp => inp.addEventListener('change', () => {
@@ -330,14 +668,19 @@ document.querySelectorAll('#insp input[data-k]').forEach(inp => inp.addEventList
   if (k === 'r') selected.rotation[['x', 'y', 'z'][i]] = v / DEG;
   if (k === 's') selected.scale.setComponent(i, v || 0.001);
   commitXform();
-  fillInspector();
+  placeHandles();
   updateBox();
 }));
-$('name').addEventListener('change', () => { if (selected) push({ type: 'rename', path: selPath, name: $('name').value.trim() }); fillInspector(); });
-$('color').addEventListener('change', () => {
+$('name').addEventListener('change', () => { if (selected) push({ type: 'rename', path: selPath, name: $('name').value.trim() }); fillInspector(); renderTimeline(); });
+function setSelColor(c) {
   if (!selected) return;
-  push({ type: $('same-mat').checked ? 'matColor' : 'color', path: selPath, color: $('color').value }, true);
-});
+  if (selected.userData.added) push({ type: 'params', path: selPath, spec: { color: c } });
+  else push({ type: $('same-mat').checked ? 'matColor' : 'color', path: selPath, color: c }, true);
+  fillInspector();
+  buildTree();
+}
+$('color').addEventListener('change', () => setSelColor($('color').value));
+$('sel-swatches').addEventListener('click', e => { const b = e.target.closest('[data-c]'); if (b) setSelColor(b.dataset.c); });
 $('parent').addEventListener('click', () => selected && select(selected.parent));
 $('hide').addEventListener('click', toggleHide);
 $('dup').addEventListener('click', duplicate);
@@ -345,7 +688,7 @@ $('del').addEventListener('click', remove);
 $('reset').addEventListener('click', () => {
   if (!selected) return;
   const fresh = nodeAt(MODELS[id]().object, selPath);
-  if (!fresh) return msg('ชิ้นนี้เป็นชิ้นที่ทำซ้ำขึ้นมา ไม่มีตำแหน่งเดิม');
+  if (!fresh) return toast('ชิ้นนี้เป็นชิ้นที่ทำซ้ำขึ้นมา ไม่มีตำแหน่งเดิม');
   push({ type: 'xform', path: selPath, p: fresh.position.toArray(), r: [fresh.rotation.x, fresh.rotation.y, fresh.rotation.z], s: fresh.scale.toArray() }, true);
 });
 
@@ -356,32 +699,337 @@ function duplicate() {
   push({ type: 'dup', path: selPath }, true);
   const parent = nodeAt(machine.object, parentPath);
   select(parent.children[parent.children.length - 1]);
-  msg('ทำซ้ำแล้ว ชิ้นใหม่เลื่อนไป +100 mm ตามแกน X');
+  toast('ทำซ้ำแล้ว ชิ้นใหม่เลื่อนไป +100 mm ตามแกน X');
 }
 function remove() {
   if (!selected) return;
-  push({ type: 'delete', path: selPath });
+  const p = selPath;
+  push({ type: 'delete', path: p });
+  if (tracked(p)) { delete anim.tracks[p]; saveAnim(id, anim); }
   select(null);
+  toast('ลบแล้ว (กด Ctrl+Z เพื่อเอากลับ)');
+}
+
+// ---------- Point handles for pipes & wires ----------
+const handles = new THREE.Group();
+scene.add(handles);
+const handleGeo = new THREE.SphereGeometry(1, 16, 12);
+const handleMat = new THREE.MeshBasicMaterial({ color: '#f07a22', depthTest: false, transparent: true, opacity: 0.95 });
+const handleOn = new THREE.MeshBasicMaterial({ color: '#0b0b0b', depthTest: false });
+let handleSel = null;
+
+function placeHandles(rebuild = false) {
+  const o = selected, a = o?.userData.added;
+  if (!a || a.kind === 'box' || tool !== 'select') { handles.clear(); return; }
+  if (rebuild || handles.children.length !== a.points.length) {
+    handles.clear();
+    a.points.forEach((_, i) => {
+      const h = new THREE.Mesh(handleGeo, handleMat);
+      h.renderOrder = 999;
+      h.userData.handle = i;
+      handles.add(h);
+    });
+  }
+  o.updateMatrixWorld(true);
+  const s = Math.max(0.018, a.radius * 1.5);
+  handles.children.forEach((h, i) => {
+    if (h === handleSel && dragging) return;
+    h.position.copy(o.localToWorld(new THREE.Vector3(...a.points[i])));
+    h.scale.setScalar(s);
+    h.material = h === handleSel ? handleOn : handleMat;
+  });
+}
+
+function pickHandle(h) {
+  handleSel = h;
+  handles.children.forEach(x => (x.material = x === h ? handleOn : handleMat));
+  attachGizmo();
+  if (h) toast(`จุดที่ ${h.userData.handle + 1} · ลากลูกศรเพื่อย้าย · Del ลบจุด`);
+}
+
+function handlePoints() {
+  const o = selected;
+  o.updateMatrixWorld(true);
+  return selected.userData.added.points.map((p, i) => i === handleSel.userData.handle ? o.worldToLocal(handleSel.position.clone()).toArray().map(r4) : p);
+}
+function livePoints() { updateAdded(selected, { points: handlePoints() }); }
+function commitHandle() {
+  const pts = handlePoints(), keep = handleSel.userData.handle;
+  push({ type: 'params', path: selPath, spec: { points: pts } });
+  placeHandles();
+  pickHandle(handles.children[keep]);
+  updateBox();
+}
+function deleteHandle() {
+  const a = selected.userData.added, i = handleSel.userData.handle;
+  if (a.points.length <= 2) return toast('ต้องมีอย่างน้อย 2 จุด');
+  editPoints(a.points.filter((_, k) => k !== i));
+  pickHandle(null);
 }
 
 // ---------- Picking ----------
 const ray = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+function setRay(e) {
+  const r = canvas.getBoundingClientRect();
+  ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+}
+function visibleHit(h) {
+  if (!h.object.isMesh) return false;
+  for (let o = h.object; o; o = o.parent) if (!o.visible) return false;
+  if (h.object === ghost) return false;
+  const m = Array.isArray(h.object.material) ? h.object.material[0] : h.object.material;
+  return !($('glass').classList.contains('on') && m.transparent && m.opacity < 0.9 && !m.map);
+}
+// First solid surface under the pointer (machine parts or the floor), with its world normal.
+function surfaceAt(e) {
+  setRay(e);
+  const hit = ray.intersectObjects([machine.object, floor], true).find(visibleHit);
+  if (!hit) return null;
+  const n = hit.face ? hit.face.normal.clone().transformDirection(hit.object.matrixWorld) : new THREE.Vector3(0, 1, 0);
+  if (n.dot(ray.ray.direction) > 0) n.negate();
+  return { point: hit.point.clone(), normal: n, object: hit.object };
+}
+
 let downAt = null;
-renderer.domElement.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; });
-renderer.domElement.addEventListener('pointerup', e => {
-  if (!downAt || dragging || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 4) return;
-  const r = renderer.domElement.getBoundingClientRect();
-  ray.setFromCamera(new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1), camera);
-  const skipGlass = $('glass').classList.contains('on');
-  const hit = ray.intersectObject(machine.object, true).find(h => {
-    if (!h.object.isMesh) return false;
-    for (let o = h.object; o; o = o.parent) if (!o.visible) return false;
-    const m = Array.isArray(h.object.material) ? h.object.material[0] : h.object.material;
-    return !(skipGlass && m.transparent && m.opacity < 0.9 && !m.map);
-  });
+canvas.addEventListener('pointerdown', e => {
+  downAt = [e.clientX, e.clientY];
+  if (e.button === 0 && tool === 'box') boxDown(e);
+});
+canvas.addEventListener('pointermove', e => {
+  if (tool === 'box') boxMove(e);
+  else if (tool === 'pipe' || tool === 'wire') lineMove(e);
+});
+canvas.addEventListener('pointerup', e => {
+  const click = downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) <= 4;
+  if (tool === 'box') { if (e.button === 0) boxUp(e); return; }
+  if (!click || dragging || e.button !== 0) return;
+  if (tool === 'pipe' || tool === 'wire') { lineClick(e); return; }
+  setRay(e);
+  if (handles.children.length) {
+    const h = ray.intersectObjects(handles.children, false)[0];
+    if (h) { pickHandle(h.object); return; }
+  }
+  const hit = ray.intersectObject(machine.object, true).find(visibleHit);
   // Alt+click grabs the part's whole group (e.g. a complete head or the hood).
   select(hit ? (e.altKey ? hit.object.parent : hit.object) : null);
 });
+canvas.addEventListener('dblclick', () => { if (draft?.points.length >= 2) finishLine(); });
+
+// ---------- Creation tools ----------
+const ghostMat = new THREE.MeshStandardMaterial({ color: '#f07a22', transparent: true, opacity: 0.45, depthWrite: false, roughness: 0.6 });
+let ghost = null, draft = null, boxDraft = null;
+const marker = new THREE.Mesh(new THREE.SphereGeometry(0.012, 12, 8), new THREE.MeshBasicMaterial({ color: '#f07a22', depthTest: false }));
+marker.renderOrder = 999;
+marker.visible = false;
+scene.add(marker);
+const pathLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: '#0b0b0b', dashSize: 0.03, gapSize: 0.02, depthTest: false }));
+pathLine.renderOrder = 998;
+scene.add(pathLine);
+
+function setGhost(mesh) {
+  if (ghost) { scene.remove(ghost); ghost.geometry.dispose(); }
+  ghost = mesh;
+  if (ghost) { ghost.material = ghostMat; ghost.castShadow = false; ghost.raycast = () => {}; scene.add(ghost); }
+}
+const snapOn = () => $('snap').classList.contains('on');
+const snapV = v => { if (snapOn()) { v.x = Math.round(v.x * 100) / 100; v.z = Math.round(v.z * 100) / 100; } return v; };
+const toLocal = v => machine.object.worldToLocal(v.clone());
+
+function setTool(t) {
+  if (t !== tool) cancelDraft();
+  tool = t;
+  document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
+  document.querySelectorAll('[data-mode]').forEach(b => (b.disabled = t !== 'select'));
+  const creating = t !== 'select';
+  // While drawing, the left button draws: rotate the view with the right button, pan with the middle one.
+  orbit.mouseButtons = creating ? { LEFT: null, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.ROTATE } : { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+  canvas.style.cursor = creating ? 'crosshair' : '';
+  marker.visible = false;
+  handleSel = null;
+  attachGizmo();
+  placeHandles(true);
+  showPanel();
+  updateGuide();
+}
+
+function updateGuide() {
+  const g = $('guide');
+  const tips = {
+    box: '<b>กล่อง</b> คลิกเพื่อวางกล่อง หรือ <b>ลาก</b>บนพื้น/ผิวด้านบนเพื่อกำหนดขนาด · คลิกขวาลากเพื่อหมุนมุมมอง · <kbd>Esc</kbd> ออก',
+    pipe: draft?.points.length ? `<b>ท่อ</b> ${draft.points.length} จุด · คลิกจุดต่อไป · กด <kbd>Shift</kbd> ค้างเพื่อขึ้น/ลงแนวตั้ง · <kbd>Enter</kbd> หรือดับเบิลคลิกเพื่อจบ · <kbd>Backspace</kbd> ลบจุดล่าสุด`
+      : '<b>ท่อ</b> คลิกที่พื้นหรือผิวชิ้นงานเพื่อเริ่มจุดแรก · คลิกขวาลากเพื่อหมุนมุมมอง',
+    wire: draft?.points.length ? `<b>สายไฟ</b> ${draft.points.length} จุด · คลิกจุดต่อไป · <kbd>Shift</kbd> ขึ้น/ลงแนวตั้ง · <kbd>Enter</kbd> หรือดับเบิลคลิกเพื่อจบ · <kbd>Backspace</kbd> ลบจุดล่าสุด`
+      : '<b>สายไฟ</b> คลิกที่จุดเริ่ม (เช่น ตู้ไฟ) แล้วคลิกไล่ไปทีละจุด',
+  };
+  g.hidden = tool === 'select';
+  g.innerHTML = (tips[tool] ?? '') + (draft?.points.length >= 2 ? ' <button class="tool primary" id="finish">✓ เสร็จ</button>' : '');
+  $('finish')?.addEventListener('click', finishLine);
+}
+
+function renderToolOpts() {
+  const o = toolOpts[tool], el = $('tool-opts');
+  const sw = `<div class="swatches" id="tool-sw">${SWATCHES.map(c => `<button style="background:${c}" data-c="${c}" class="${c === o.color ? 'on' : ''}"></button>`).join('')}</div>`;
+  if (tool === 'box') {
+    el.innerHTML = `<div class="sel-name">✚ สร้างกล่อง</div>
+      <p class="hint">คลิกเพื่อวางกล่องขนาดตามนี้ หรือลากบนพื้นเพื่อกำหนดกว้าง×ลึกเอง (ใช้ความสูงตามนี้) ใช้ทำตู้ไฟ ฐานรอง แท่นวาง โต๊ะ ฯลฯ</p>
+      <h2>ขนาดเริ่มต้น (mm)</h2><div class="grid3">
+      <label class="field">กว้าง X<input type="number" min="1" step="10" data-o="w" value="${mm(o.w)}"></label>
+      <label class="field">สูง Y<input type="number" min="1" step="10" data-o="h" value="${mm(o.h)}"></label>
+      <label class="field">ลึก Z<input type="number" min="1" step="10" data-o="d" value="${mm(o.d)}"></label></div>
+      <h2>สี</h2><input type="color" id="tool-color" value="${o.color}">${sw}`;
+  } else {
+    const isPipe = tool === 'pipe';
+    const sizes = isPipe ? [16, 25, 32, 50, 80, 100] : [6, 10, 16, 25, 40];
+    el.innerHTML = `<div class="sel-name">✚ ${isPipe ? 'ลากท่อ' : 'ลากสายไฟ'}</div>
+      <p class="hint">${isPipe ? 'ท่อลม ท่อดูดฝุ่น ท่อน้ำ เส้นตรงหักมุมโค้ง' : 'สายไฟ สายลม สายสัญญาณ เส้นโค้งหย่อนตามธรรมชาติ'} · คลิกทีละจุด <kbd>Enter</kbd> จบ</p>
+      <h2>เส้นผ่านศูนย์กลาง (mm)</h2>
+      <div class="swatches" id="tool-size">${sizes.map(s => `<button class="tool ${mm(o.radius * 2) === s ? 'on' : ''}" data-s="${s}" style="width:auto;height:26px;padding:0 8px;font-size:12px;border:1px solid rgba(0,0,0,.12)">${s}</button>`).join('')}</div>
+      <div class="grid2" style="margin-top:6px">
+        <label class="field">กำหนดเอง (mm)<input type="number" min="1" step="1" data-o="radius" value="${mm(o.radius * 2)}"></label>
+        <label class="field">ยกจากผิว (mm)<input type="number" min="0" step="10" data-o="lift" value="${mm(o.lift)}"></label>
+        ${isPipe ? '' : `<label class="field">หย่อน (%)<input type="number" min="0" max="40" step="1" data-o="sag" value="${Math.round(o.sag * 100)}"></label>`}
+      </div>
+      <label class="ck" style="margin-top:8px"><input type="checkbox" data-o="ortho" ${o.ortho ? 'checked' : ''}> เดินตั้งฉาก (ตามแกน X/Y/Z)</label>
+      ${isPipe ? `<label class="ck" style="margin-top:4px"><input type="checkbox" data-o="flange" ${o.flange ? 'checked' : ''}> หน้าแปลนที่ปลายท่อ</label>` : ''}
+      <h2>สี</h2><input type="color" id="tool-color" value="${o.color}">${sw}`;
+    el.querySelector('#tool-size').addEventListener('click', e => { const b = e.target.closest('[data-s]'); if (b) { o.radius = +b.dataset.s / 2000; renderToolOpts(); refreshDraft(); } });
+  }
+  el.querySelectorAll('[data-o]').forEach(inp => inp.addEventListener('change', () => {
+    const k = inp.dataset.o;
+    if (inp.type === 'checkbox') o[k] = inp.checked;
+    else if (k === 'radius') o.radius = Math.max(1, +inp.value) / 2000;
+    else if (k === 'sag') o.sag = Math.max(0, +inp.value) / 100;
+    else o[k] = Math.max(k === 'lift' ? 0 : 1, +inp.value) / 1000;
+    renderToolOpts();
+    refreshDraft();
+  }));
+  $('tool-color').addEventListener('input', e => { o.color = e.target.value; });
+  $('tool-color').addEventListener('change', () => renderToolOpts());
+  $('tool-sw').addEventListener('click', e => { const b = e.target.closest('[data-c]'); if (b) { o.color = b.dataset.c; renderToolOpts(); } });
+}
+
+// Box: click = default size, drag on a top surface = footprint.
+function boxSpecAt(hit, w, d) {
+  const o = toolOpts.box, n = hit.normal;
+  const c = hit.point.clone();
+  if (Math.abs(n.y) > 0.7) c.y += Math.sign(n.y) * o.h / 2;
+  else c.addScaledVector(n, Math.abs(n.x) * (w ?? o.w) / 2 + Math.abs(n.z) * (d ?? o.d) / 2);
+  return { ...ADD_DEFAULTS.box, w: w ?? o.w, h: o.h, d: d ?? o.d, color: o.color, p: toLocal(snapV(c)).toArray().map(r4) };
+}
+function boxDown(e) {
+  const hit = surfaceAt(e);
+  if (!hit) return;
+  boxDraft = { hit, start: snapV(hit.point.clone()), flat: Math.abs(hit.normal.y) > 0.7 };
+}
+function boxRect(e) {
+  const b = boxDraft;
+  setRay(e);
+  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -b.start.y);
+  const p = ray.ray.intersectPlane(plane, new THREE.Vector3());
+  if (!p) return null;
+  snapV(p);
+  const w = Math.abs(p.x - b.start.x), d = Math.abs(p.z - b.start.z);
+  if (w < 0.02 && d < 0.02) return null;
+  const center = new THREE.Vector3((p.x + b.start.x) / 2, b.start.y, (p.z + b.start.z) / 2);
+  return boxSpecAt({ point: center, normal: b.hit.normal }, Math.max(0.01, w), Math.max(0.01, d));
+}
+function boxMove(e) {
+  let spec = null;
+  if (boxDraft?.flat) spec = boxRect(e);
+  if (!spec && !boxDraft) { const hit = surfaceAt(e); if (hit) spec = boxSpecAt(hit); }
+  if (!spec && boxDraft) spec = boxSpecAt(boxDraft.hit);
+  if (!spec) { setGhost(null); return; }
+  const g = makeAdded(spec);
+  g.position.copy(machine.object.localToWorld(new THREE.Vector3(...spec.p)));
+  setGhost(g);
+  $('guide').innerHTML = `<b>กล่อง</b> ${mm(spec.w)} × ${mm(spec.h)} × ${mm(spec.d)} mm · ${boxDraft ? 'ปล่อยเมาส์เพื่อสร้าง' : 'คลิกหรือลากเพื่อสร้าง · <kbd>Esc</kbd> ออก'}`;
+}
+function boxUp(e) {
+  if (!boxDraft) return;
+  const spec = (boxDraft.flat && boxRect(e)) || boxSpecAt(boxDraft.hit);
+  boxDraft = null;
+  setGhost(null);
+  createAdded(spec);
+}
+
+function createAdded(spec) {
+  push({ type: 'add', path: '', spec });
+  const o = machine.object.children[machine.object.children.length - 1];
+  setTool('select');
+  select(o);
+  toast(`สร้าง${ADD_NAMES[spec.kind]}แล้ว · ลากลูกศรเพื่อย้าย หรือแก้ขนาดทางขวา`);
+}
+
+// Pipe / wire: click points one by one.
+function nextPoint(e) {
+  const o = toolOpts[tool], last = draft?.points[draft.points.length - 1];
+  setRay(e);
+  if (e.shiftKey && last) {
+    // Straight up/down from the last point: closest spot on the vertical line through it.
+    const w = new THREE.Vector3(...last.toArray()).sub(ray.ray.origin), D = ray.ray.direction;
+    const b = D.y, d = w.y, ee = D.dot(w), den = 1 - b * b;
+    if (den < 1e-4) return null;
+    const s = (b * ee - d) / den;
+    return new THREE.Vector3(last.x, Math.max(o.radius, last.y + s), last.z);
+  }
+  const hit = surfaceAt(e);
+  if (!hit) return null;
+  const p = hit.point.addScaledVector(hit.normal, o.radius + (o.lift || 0));
+  snapV(p);
+  if (o.ortho && last) {
+    const d = p.clone().sub(last), ax = ['x', 'y', 'z'].reduce((a, k) => (Math.abs(d[k]) > Math.abs(d[a]) ? k : a), 'x');
+    const q = last.clone();
+    q[ax] = p[ax];
+    return q;
+  }
+  return p;
+}
+function lineMove(e) {
+  const p = nextPoint(e);
+  marker.visible = !!p;
+  if (p) marker.position.copy(p);
+  if (draft) { draft.hover = p; refreshDraft(); }
+}
+function refreshDraft() {
+  if (!draft) { setGhost(null); pathLine.visible = false; return; }
+  const pts = draft.points.concat(draft.hover ? [draft.hover] : []);
+  pathLine.geometry.setFromPoints(pts);
+  pathLine.computeLineDistances();
+  pathLine.visible = pts.length > 1;
+  const o = toolOpts[tool];
+  if (pts.length > 1) setGhost(makeAdded({ ...ADD_DEFAULTS[tool], ...o, points: pts.map(v => toLocal(v).toArray()) }));
+  else setGhost(null);
+  if (ghost) ghost.matrixAutoUpdate = true, ghost.position.set(0, 0, 0), machine.object.updateMatrixWorld(), ghost.applyMatrix4(machine.object.matrixWorld);
+}
+function lineClick(e) {
+  const p = nextPoint(e);
+  if (!p) return;
+  draft ||= { kind: tool, points: [], hover: null };
+  const last = draft.points[draft.points.length - 1];
+  if (last && last.distanceTo(p) < 0.005) return;
+  draft.points.push(p);
+  refreshDraft();
+  updateGuide();
+}
+function finishLine() {
+  if (!draft || draft.points.length < 2) return;
+  const o = toolOpts[draft.kind];
+  const spec = { ...ADD_DEFAULTS[draft.kind], radius: o.radius, color: o.color, points: draft.points.map(v => toLocal(v).toArray().map(r4)) };
+  if (draft.kind === 'pipe') spec.flange = o.flange; else spec.sag = o.sag;
+  cancelDraft();
+  createAdded(spec);
+}
+function cancelDraft() {
+  draft = null; boxDraft = null;
+  setGhost(null);
+  pathLine.visible = false;
+  marker.visible = false;
+  if (tool !== 'select') updateGuide();
+}
+
+document.querySelectorAll('[data-tool]').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
 
 // ---------- Tree ----------
 function buildTree() {
@@ -390,41 +1038,50 @@ function buildTree() {
     for (const c of o.children) {
       if (c.isLight || c.isCSS2DObject) continue;
       // Color dot and size help tell the many plain boxes apart.
-      const col = colorOf(c), sz = boundsOf(c).getSize(new THREE.Vector3());
-      const dims = sz.lengthSq() ? ` <span style="opacity:.55">${[sz.x, sz.y, sz.z].map(v => Math.round(v * 1000)).join('×')}</span>` : '';
-      rows.push(`<div data-p="${pathOf(machine.object, c)}" class="${c.visible ? '' : 'off'}" style="padding-left:${4 + depth * 12}px">${col ? `<span style="color:${col}">●</span> ` : ''}${escape(label(c))}${dims}</div>`);
+      const col = c.userData.added?.color ?? colorOf(c), sz = boundsOf(c).getSize(new THREE.Vector3());
+      const dims = sz.lengthSq() ? ` <span style="opacity:.55">${[sz.x, sz.y, sz.z].map(mm).join('×')}</span>` : '';
+      const key = tracked(pathOf(machine.object, c)) ? ' <span style="color:var(--accent)">◆</span>' : '';
+      rows.push(`<div data-p="${pathOf(machine.object, c)}" class="${c.visible ? '' : 'off'} ${c.userData.added ? 'new' : ''}" style="padding-left:${4 + depth * 12}px">${col ? `<span style="color:${col}">●</span> ` : ''}${c.userData.added ? '✚ ' : ''}${escape(label(c))}${key}${dims}</div>`);
       if (c.isGroup && depth < 4) walk(c, depth + 1);
     }
   };
   walk(machine.object, 0);
   $('tree').innerHTML = rows.join('');
+  filterTree();
   markTree();
 }
-const escape = s => s.replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+const escape = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 function markTree() {
   let on = null;
   $('tree').querySelectorAll('div').forEach(d => { const yes = d.dataset.p === selPath; d.classList.toggle('on', yes); if (yes) on = d; });
   on?.scrollIntoView({ block: 'nearest' });
 }
-$('tree').addEventListener('click', e => { const d = e.target.closest('[data-p]'); if (d) select(nodeAt(machine.object, d.dataset.p)); });
-
-// ---------- Log, undo / redo, files ----------
-const OPNAME = { xform: 'ย้าย/หมุน/สเกล', color: 'เปลี่ยนสี', matColor: 'เปลี่ยนสีทั้งวัสดุ', hide: 'ซ่อน/แสดง', delete: 'ลบ', dup: 'ทำซ้ำ', rename: 'ตั้งชื่อ' };
-function renderLog() {
-  $('log').innerHTML = ops.length ? ops.map(o => `<li>${OPNAME[o.type] ?? o.type} <span style="opacity:.6">${o.path}</span>${o.color ? ` <span style="color:${o.color}">■</span>` : ''}</li>`).join('')
-    : '<span style="margin-left:-18px">ยังไม่มีการแก้ไข</span>';
-  $('log').scrollTop = 1e6;
-  $('undo').disabled = !ops.length;
-  $('redo').disabled = !redo.length;
+function filterTree() {
+  const q = $('tree-q').value.trim().toLowerCase();
+  $('tree').querySelectorAll('div').forEach(d => (d.style.display = !q || d.textContent.toLowerCase().includes(q) ? '' : 'none'));
 }
-function undo() { if (!ops.length) return; redo.push(ops.pop()); build(); persist(); }
-function redoOp() { if (!redo.length) return; ops.push(redo.pop()); build(); persist(); }
+$('tree-q').addEventListener('input', filterTree);
+$('tree').addEventListener('click', e => { const d = e.target.closest('[data-p]'); if (d) { if (tool !== 'select') setTool('select'); select(nodeAt(machine.object, d.dataset.p)); } });
+
+// ---------- Log, files ----------
+const OPNAME = { xform: 'ย้าย/หมุน/สเกล', color: 'เปลี่ยนสี', matColor: 'เปลี่ยนสีทั้งวัสดุ', hide: 'ซ่อน/แสดง', delete: 'ลบ', dup: 'ทำซ้ำ', rename: 'ตั้งชื่อ', add: 'สร้าง', params: 'แก้ขนาด/แนว' };
+function renderLog() {
+  const k = keyCount();
+  $('log').innerHTML = (ops.length ? ops.map(o => `<li>${OPNAME[o.type] ?? o.type}${o.type === 'add' ? ADD_NAMES[o.spec.kind] : ''} <span style="opacity:.6">${o.path || 'ราก'}</span>${o.color || o.spec?.color ? ` <span style="color:${o.color || o.spec.color}">■</span>` : ''}</li>`).join('')
+    : '<span style="margin-left:-18px">ยังไม่มีการแก้ไข</span>') + (k ? `<li style="color:var(--accent)">คีย์เฟรม ${k} คีย์ใน ${Object.values(anim.tracks).filter(t => t.length).length} ชิ้น</li>` : '');
+  $('log').scrollTop = 1e6;
+  $('undo').disabled = !undoStack.length;
+  $('redo').disabled = !redoStack.length;
+}
 $('undo').addEventListener('click', undo);
 $('redo').addEventListener('click', redoOp);
 $('clear').addEventListener('click', () => {
-  if (!ops.length) return;
-  if (!confirm('ล้างการแก้ไขทั้งหมดของรุ่นนี้? (ย้อนกลับด้วย Ctrl+Z ไม่ได้)')) return;
-  ops = []; redo = []; selPath = null; build(); persist();
+  if (!ops.length && !hasKeys(anim)) return;
+  if (!confirm('ล้างการแก้ไขและคีย์เฟรมทั้งหมดของรุ่นนี้? (กด Ctrl+Z เพื่อเอากลับได้ในหน้านี้)')) return;
+  checkpoint();
+  ops = []; anim = emptyAnim(); selPath = null; selKey = null; time = 0;
+  $('tl-dur').value = anim.duration;
+  build(); persist();
 });
 $('view').addEventListener('click', () => { location.href = `index.html?m=${id}`; });
 
@@ -435,10 +1092,12 @@ function download(blob, name) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
-$('save-file').addEventListener('click', () => {
-  download(new Blob([JSON.stringify({ machine: id, savedAt: new Date().toISOString(), ops }, null, 1)], { type: 'application/json' }), `edits-${id}.json`);
-  msg(`edits-${id}.json · ${ops.length} รายการ`);
-});
+function saveProject() {
+  download(new Blob([JSON.stringify({ machine: id, savedAt: new Date().toISOString(), version: 2, ops, anim }, null, 1)], { type: 'application/json' }), `edits-${id}.json`);
+  toast(`บันทึก edits-${id}.json แล้ว · ${ops.length} การแก้ไข · ${keyCount()} คีย์เฟรม`);
+}
+$('save-file').addEventListener('click', saveProject);
+$('save-btn').addEventListener('click', saveProject);
 $('load-file').addEventListener('click', () => $('file').click());
 $('file').addEventListener('change', async () => {
   const f = $('file').files[0];
@@ -449,12 +1108,326 @@ $('file').addEventListener('change', async () => {
     const list = Array.isArray(data) ? data : data.ops;
     if (!Array.isArray(list)) throw new Error('ไม่ใช่ไฟล์การแก้ไข');
     if (data.machine && data.machine !== id && MODELS[data.machine]) load(data.machine);
-    ops = list; redo = []; selPath = null; build(); persist();
-    msg(`เปิด ${f.name} แล้ว · ${list.length} รายการ`);
-  } catch (err) { msg('เปิดไฟล์ไม่ได้: ' + err.message); }
+    checkpoint();
+    ops = list;
+    anim = data.anim?.tracks ? data.anim : emptyAnim();
+    selPath = null; selKey = null; time = 0;
+    $('tl-dur').value = anim.duration;
+    $('tl-loop').checked = anim.loop !== false;
+    build(); persist();
+    toast(`เปิด ${f.name} แล้ว · ${list.length} การแก้ไข · ${keyCount()} คีย์เฟรม`);
+  } catch (err) { toast('เปิดไฟล์ไม่ได้: ' + err.message); }
 });
 
-// ---------- Export ----------
+// ---------- Timeline ----------
+function renderTimeline() {
+  if (!machine) return;
+  const dur = anim.duration;
+  // Ruler
+  const step = dur <= 3 ? 0.25 : dur <= 8 ? 0.5 : dur <= 30 ? 1 : 5;
+  const major = dur <= 3 ? 0.5 : dur <= 8 ? 1 : dur <= 30 ? 5 : 10;
+  let ticks = '';
+  for (let t = 0; t <= dur + 1e-6; t += step) {
+    const isMajor = Math.abs(t / major - Math.round(t / major)) < 1e-6;
+    ticks += `<div class="tick ${isMajor ? '' : 'minor'}" style="left:${t / dur * 100}%">${isMajor ? `<span>${+t.toFixed(2)}s</span>` : ''}</div>`;
+  }
+  $('ruler').innerHTML = ticks;
+  // Rows: every part with keys, plus the selected part
+  const paths = Object.keys(anim.tracks).filter(tracked);
+  if (selPath != null && !paths.includes(selPath)) paths.push(selPath);
+  $('tl-rows').innerHTML = paths.length ? paths.map(p => {
+    const keys = anim.tracks[p] || [];
+    const kf = keys.map((k, i) => `<i class="kf ${k.ease ?? 'smooth'} ${selKey?.path === p && Math.abs(selKey.t - k.t) < 1e-4 ? 'on' : ''}" data-i="${i}" style="left:${Math.min(100, k.t / dur * 100)}%" title="${k.t.toFixed(2)} s · ${EASES[k.ease ?? 'smooth']}"></i>`).join('');
+    return `<div class="tl-row ${p === selPath ? 'on' : ''}" data-p="${p}"><div class="tl-name" title="${escape(label(nodeAt(machine.object, p)))}">${keys.length ? `<button class="x" data-clear title="ลบคีย์ทั้งหมดของชิ้นนี้">×</button>` : ''}<span>${escape(label(nodeAt(machine.object, p)))}</span></div>
+      <div class="tl-lane">${kf || `<span class="tl-empty">ยังไม่มีคีย์ · กด ◆ ใส่คีย์ หรือ <kbd>K</kbd></span>`}</div></div>`;
+  }).join('') : `<div class="tl-row"><div class="tl-name" style="color:var(--text-2)">—</div><div class="tl-lane"><span class="tl-empty">เลือกชิ้นส่วนในโมเดล แล้วกด ◆ ใส่คีย์ เพื่อเริ่มทำแอนิเมชัน</span></div></div>`;
+  // Key toolbar
+  const k = currentKey();
+  $('key-edit').hidden = !k;
+  if (k) $('key-ease').value = k.ease ?? 'smooth';
+  $('addkey').disabled = !selected;
+  updateClock();
+}
+
+function currentKey() {
+  if (!selKey) return null;
+  return anim.tracks[selKey.path]?.find(k => Math.abs(k.t - selKey.t) < 1e-4) ?? null;
+}
+
+function updateClock() {
+  $('tl-time').textContent = `${time.toFixed(2)} / ${anim.duration.toFixed(2)} s`;
+  const lane = $('ruler'), body = $('tl-body');
+  $('playhead').style.left = `${lane.offsetLeft + Math.min(1, time / anim.duration) * lane.clientWidth}px`;
+  $('playhead').style.height = `${body.scrollHeight}px`;
+}
+
+function setTime(t, pose = true) {
+  time = Math.max(0, Math.min(anim.duration, t));
+  if (pose) applyPose();
+  if (selected) { fillInspector(); updateBox(); placeHandles(); }
+  updateClock();
+}
+
+function timeFromX(x, shift) {
+  const r = $('ruler').getBoundingClientRect();
+  const t = (x - r.left) / r.width * anim.duration;
+  return shift ? t : Math.round(t * 20) / 20; // 0.05 s steps
+}
+
+$('tl-body').addEventListener('pointerdown', e => {
+  const kfEl = e.target.closest('.kf'), row = e.target.closest('.tl-row[data-p]');
+  if (e.target.closest('[data-clear]')) {
+    const p = row.dataset.p;
+    animEdit(() => delete anim.tracks[p], true);
+    toast('ลบคีย์ทั้งแถวแล้ว');
+    return;
+  }
+  if (e.target.closest('.tl-name')) {
+    if (row) { if (tool !== 'select') setTool('select'); select(nodeAt(machine.object, row.dataset.p)); }
+    return;
+  }
+  if (playing) stop();
+  if (kfEl) {
+    // Pick a key: jump there and allow dragging it along the time line.
+    const p = row.dataset.p, key = anim.tracks[p][+kfEl.dataset.i];
+    if (selPath !== p) select(nodeAt(machine.object, p));
+    selKey = { path: p, t: key.t };
+    setTime(key.t);
+    renderTimeline();
+    let moved = false;
+    const before = state();
+    const move = ev => {
+      const t = Math.max(0, Math.min(anim.duration, timeFromX(ev.clientX, ev.shiftKey)));
+      if (Math.abs(t - key.t) < 1e-4) return;
+      if (anim.tracks[p].some(k => k !== key && Math.abs(k.t - t) < 1e-3)) return;
+      moved = true;
+      key.t = +t.toFixed(3);
+      anim.tracks[p].sort((a, b) => a.t - b.t);
+      selKey = { path: p, t: key.t };
+      setTime(key.t);
+      renderTimeline();
+    };
+    const up = () => {
+      removeEventListener('pointermove', move); removeEventListener('pointerup', up);
+      if (moved) { undoStack.push(before); redoStack = []; persist(); renderLog(); toast(`ย้ายคีย์ไป ${key.t.toFixed(2)} s`); }
+    };
+    addEventListener('pointermove', move); addEventListener('pointerup', up);
+    return;
+  }
+  // Scrub
+  selKey = null;
+  if (row && row.dataset.p !== selPath) select(nodeAt(machine.object, row.dataset.p));
+  setTime(timeFromX(e.clientX, e.shiftKey));
+  renderTimeline();
+  const move = ev => setTime(timeFromX(ev.clientX, ev.shiftKey));
+  const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+});
+$('tl-body').addEventListener('contextmenu', e => {
+  const kfEl = e.target.closest('.kf');
+  if (!kfEl) return;
+  e.preventDefault();
+  const p = kfEl.closest('[data-p]').dataset.p;
+  selKey = { path: p, t: anim.tracks[p][+kfEl.dataset.i].t };
+  deleteKey();
+});
+
+function addKey() {
+  if (!selected) return toast('เลือกชิ้นส่วนก่อน แล้วค่อยใส่คีย์');
+  if (playing) stop();
+  const p = selPath, first = !tracked(p);
+  animEdit(() => setKey(anim, p, keyOf(selected, time)));
+  selKey = { path: p, t: +time.toFixed(3) };
+  renderTimeline();
+  buildTree();
+  fillInspector();
+  toast(first ? `◆ คีย์แรกที่ ${time.toFixed(2)} s · เลื่อนเวลาแล้วย้ายชิ้น จะได้คีย์ใหม่อัตโนมัติ` : `◆ ใส่คีย์ที่ ${time.toFixed(2)} s`);
+}
+function deleteKey() {
+  const k = currentKey();
+  if (!k) return;
+  const p = selKey.path;
+  animEdit(() => {
+    anim.tracks[p] = anim.tracks[p].filter(x => x !== k);
+    if (!anim.tracks[p].length) delete anim.tracks[p];
+  }, true);
+  selKey = null;
+  renderTimeline();
+  toast('ลบคีย์แล้ว');
+}
+$('addkey').addEventListener('click', addKey);
+$('key-del').addEventListener('click', deleteKey);
+$('key-ease').innerHTML = Object.entries(EASES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+$('key-ease').addEventListener('change', () => {
+  const k = currentKey();
+  if (k) animEdit(() => (k.ease = $('key-ease').value));
+});
+$('tl-dur').addEventListener('change', () => {
+  const d = Math.max(0.5, Math.min(600, +$('tl-dur').value || 5));
+  const last = Math.max(0, ...Object.values(anim.tracks).flat().map(k => k.t));
+  if (d < last) { toast(`มีคีย์อยู่ที่ ${last.toFixed(2)} s ความยาวต้องไม่น้อยกว่านี้`); $('tl-dur').value = anim.duration; return; }
+  animEdit(() => (anim.duration = d));
+  $('tl-dur').value = d;
+  setTime(time);
+});
+$('tl-loop').addEventListener('change', () => animEdit(() => (anim.loop = $('tl-loop').checked)));
+$('tl-start').addEventListener('click', () => { setTime(0); });
+$('tl-play').addEventListener('click', () => (playing ? stop() : play()));
+$('tl-min').addEventListener('click', () => {
+  const min = $('timeline').classList.toggle('min');
+  $('tl-min').textContent = min ? '▴' : '▾';
+  sizeTimeline();
+});
+
+function play() {
+  if (!hasKeys(anim) && !$('tl-builtin').checked) {
+    $('tl-builtin').checked = true;
+    toast('ยังไม่มีคีย์เฟรม เลยเล่นการเคลื่อนไหวเดิมของเครื่องให้ดู');
+  }
+  cancelDraft();
+  if (time >= anim.duration - 1e-3) time = 0;
+  playing = true;
+  $('tl-play').textContent = '❚❚ หยุด';
+  $('tl-play').classList.add('on');
+}
+function stop() {
+  if (!playing) return;
+  playing = false;
+  $('tl-play').textContent = '▶ เล่น';
+  $('tl-play').classList.remove('on');
+  if (builtinRan) build(); // back to the start pose, where the edits apply
+  else setTime(time);
+}
+
+function sizeTimeline() {
+  document.documentElement.style.setProperty('--tl-h', `${$('timeline').offsetHeight}px`);
+  updateClock();
+}
+new ResizeObserver(sizeTimeline).observe($('timeline'));
+
+// ---------- Export preview ----------
+const pv = { kind: 'dae', lod: 'high', pose: 'zero', renderer: null, scene: null, camera: null, controls: null, shown: null, mixer: null, playing: false, spin: true };
+const FMT_NOTE = {
+  dae: '<b>SketchUp</b>: File → Import → เลือก .dae · มีสีครบ · ไม่มีตัวหนังสือ/โลโก้ (SketchUp อ่าน texture จากไฟล์นี้ไม่ได้) · ไม่มีแอนิเมชัน',
+  glb: '<b>Blender / เว็บ / Unity</b> · ครบทั้งสี ตัวหนังสือ โลโก้ · <b>ใส่แอนิเมชันคีย์เฟรมได้</b> (Blender: File → Import → glTF)',
+  obj: 'ไฟล์ zip มี .obj + .mtl · เปิดได้แทบทุกโปรแกรม · มีสี · ไม่มีตัวหนังสือ/แอนิเมชัน',
+  stl: 'รูปทรงอย่างเดียว <b>ไม่มีสี</b> (ตัวอย่างแสดงเป็นสีเทา) · ใช้กับ CAD / เครื่องพิมพ์ 3 มิติ',
+};
+
+function exportObject() {
+  let m = MODELS[id]();
+  applyEdits(m.object, ops);
+  if (hasKeys(anim)) poseAt(m.object, anim, pv.pose === 'now' && !wantAnim() ? time : 0);
+  if (!$('pv-piece').checked && m.workpiece) m.workpiece.visible = false;
+  if (!$('pv-zones').checked) m.object.traverse(o => { if (o.userData.operatorZone) o.visible = false; });
+  if (pv.lod === 'low') m = lowPolyMachine(m);
+  return m.object;
+}
+const wantAnim = () => pv.kind === 'glb' && pv.lod === 'high' && hasKeys(anim) && $('pv-anim').checked;
+
+function openPreview() {
+  if (tool !== 'select') setTool('select');
+  stop();
+  $('pv').hidden = false;
+  if (!pv.renderer) {
+    pv.renderer = new THREE.WebGLRenderer({ antialias: true });
+    pv.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    pv.renderer.shadowMap.enabled = true;
+    pv.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    pv.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    $('pv-view').prepend(pv.renderer.domElement);
+    pv.scene = new THREE.Scene();
+    pv.scene.background = new THREE.Color('#d9dde0');
+    addLights(pv.scene);
+    pv.camera = new THREE.PerspectiveCamera(35, 1, 0.02, 200);
+    pv.controls = new OrbitControls(pv.camera, pv.renderer.domElement);
+    pv.controls.enableDamping = true;
+    pv.controls.autoRotateSpeed = 1.2;
+    pv.controls.addEventListener('start', () => { pv.spin = false; $('pv-spin').classList.remove('on'); });
+  }
+  $('pv-sub').textContent = `${byId[id]?.name ?? id} · ${ops.length} การแก้ไข · ${keyCount()} คีย์เฟรม · หน่วยเมตร แกน Y ขึ้น`;
+  $('pv-msg').textContent = '';
+  refreshPreview(true);
+}
+function closePreview() { $('pv').hidden = true; pv.playing = false; }
+
+function segSet(elId, v) { document.querySelectorAll(`#${elId} button`).forEach(b => b.classList.toggle('on', b.dataset.v === v)); }
+
+async function refreshPreview(fit = false) {
+  segSet('pv-fmt', pv.kind); segSet('pv-lod', pv.lod); segSet('pv-pose', pv.pose);
+  const keys = hasKeys(anim);
+  $('pv-note').innerHTML = FMT_NOTE[pv.kind] + (pv.lod === 'low' ? '<br>Low poly: ตัดชิ้นเล็ก รวมชิ้นสีเดียวกัน เบาสำหรับวางในผัง (ไม่มีแอนิเมชัน)' : '');
+  $('pv-anim').disabled = !(pv.kind === 'glb' && pv.lod === 'high' && keys);
+  $('pv-anim').parentElement.style.opacity = $('pv-anim').disabled ? 0.45 : 1;
+  document.querySelector('#pv-pose [data-v="now"]').disabled = !keys || wantAnim();
+  document.querySelector('#pv-pose [data-v="now"]').textContent = `ที่ ${time.toFixed(2)} s`;
+  $('pv-busy').hidden = false;
+  $('pv-go').disabled = true;
+  await new Promise(r => setTimeout(r, 30)); // let the "busy" note paint
+  try {
+    if (pv.shown) pv.scene.remove(pv.shown);
+    pv.mixer = null; pv.playing = false;
+    const obj = exportObject();
+    let shown = obj;
+    if (pv.kind !== 'glb') shown = bakedPreview(obj, pv.kind);
+    pv.shown = shown;
+    pv.scene.add(shown);
+    const st = exportStats(obj, pv.kind);
+    const size = boundsOf(shown).getSize(new THREE.Vector3());
+    const clip = wantAnim() ? toClip(obj, anim) : null;
+    if (clip) { pv.mixer = new THREE.AnimationMixer(obj); pv.mixer.clipAction(clip).play(); pv.mixer.setTime(0); }
+    $('pv-play').hidden = !clip;
+    $('pv-play').textContent = '▶ เล่นแอนิเมชัน';
+    $('pv-stats').innerHTML = `
+      <dt>ยาว × กว้าง × สูง</dt><dd>${mm(size.x).toLocaleString('en')} × ${mm(size.z).toLocaleString('en')} × ${mm(size.y).toLocaleString('en')} mm</dd>
+      <dt>ชิ้น (mesh)</dt><dd>${st.parts.toLocaleString('en')}</dd>
+      <dt>สามเหลี่ยม</dt><dd>${st.tris.toLocaleString('en')}</dd>
+      <dt>สี/วัสดุ</dt><dd>${pv.kind === 'stl' ? 'ไม่มี' : st.mats}</dd>
+      <dt>ชิ้นที่สร้างเอง</dt><dd>${ops.filter(o => o.type === 'add').length}</dd>
+      <dt>แอนิเมชัน</dt><dd>${clip ? `${anim.duration.toFixed(1)} s · ${Object.keys(anim.tracks).length} ชิ้น` : 'ไม่มี'}</dd>`;
+    if (fit) fitPreview(shown);
+  } catch (err) {
+    $('pv-msg').textContent = 'เตรียมตัวอย่างไม่ได้: ' + err.message;
+  } finally {
+    $('pv-busy').hidden = true;
+    $('pv-go').disabled = false;
+  }
+}
+
+function fitPreview(obj) {
+  const box = boundsOf(obj);
+  const c = box.getCenter(new THREE.Vector3()), r = Math.max(0.3, box.getSize(new THREE.Vector3()).length() / 2);
+  const dir = camera.position.clone().sub(orbit.target).normalize();
+  resizePreview();
+  const vfov = THREE.MathUtils.degToRad(pv.camera.fov), hfov = 2 * Math.atan(Math.tan(vfov / 2) * pv.camera.aspect);
+  pv.controls.target.copy(c);
+  pv.camera.position.copy(c).addScaledVector(dir, r / Math.sin(Math.min(vfov, hfov) / 2) * 1.05);
+}
+function resizePreview() {
+  if (!pv.renderer) return;
+  const el = $('pv-view'), w = el.clientWidth, h = el.clientHeight;
+  pv.renderer.setSize(w, h);
+  pv.camera.aspect = w / h;
+  pv.camera.updateProjectionMatrix();
+}
+
+const segClick = (elId, key) => $(elId).addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b || b.disabled || pv[key] === b.dataset.v) return;
+  pv[key] = b.dataset.v;
+  refreshPreview(key === 'lod');
+});
+segClick('pv-fmt', 'kind'); segClick('pv-lod', 'lod'); segClick('pv-pose', 'pose');
+['pv-anim', 'pv-zones', 'pv-piece'].forEach(k => $(k).addEventListener('change', () => refreshPreview()));
+$('pv-close').addEventListener('click', closePreview);
+$('pv').addEventListener('pointerdown', e => { if (e.target === $('pv')) closePreview(); });
+$('pv-spin').addEventListener('click', () => { pv.spin = !pv.spin; $('pv-spin').classList.toggle('on', pv.spin); });
+$('pv-play').addEventListener('click', () => {
+  pv.playing = !pv.playing;
+  $('pv-play').textContent = pv.playing ? '❚❚ หยุด' : '▶ เล่นแอนิเมชัน';
+});
+$('export-btn').addEventListener('click', openPreview);
+
 async function loadZip() {
   if (window.JSZip) return window.JSZip;
   await new Promise((ok, fail) => {
@@ -465,32 +1438,34 @@ async function loadZip() {
   });
   return window.JSZip;
 }
-document.querySelectorAll('[data-exp]').forEach(b => b.addEventListener('click', async () => {
-  const kind = b.dataset.exp, obj = machine.object, title = byId[id]?.name ?? id;
-  b.disabled = true;
-  msg('กำลังสร้างไฟล์…');
-  const was = selBox.visible; selBox.visible = false;
+$('pv-go').addEventListener('click', async () => {
+  const kind = pv.kind, title = byId[id]?.name ?? id, base = `${id}-edited${pv.lod === 'low' ? '-lowpoly' : ''}`;
+  $('pv-go').disabled = true;
+  $('pv-msg').textContent = 'กำลังสร้างไฟล์…';
   try {
+    const obj = exportObject(); // a fresh copy, untouched by the preview's playback
     let blob, name;
-    if (kind === 'dae') [blob, name] = [new Blob([toDAE(obj, title)]), `${id}-edited.dae`];
-    else if (kind === 'stl') [blob, name] = [new Blob([toSTL(obj)]), `${id}-edited.stl`];
-    else if (kind === 'glb') [blob, name] = [new Blob([await toGLB(obj)]), `${id}-edited.glb`];
+    if (kind === 'dae') [blob, name] = [new Blob([toDAE(obj, title)]), `${base}.dae`];
+    else if (kind === 'stl') [blob, name] = [new Blob([toSTL(obj)]), `${base}.stl`];
+    else if (kind === 'glb') [blob, name] = [new Blob([await toGLB(obj, wantAnim() ? [toClip(obj, anim)] : [])], { type: 'model/gltf-binary' }), `${base}.glb`];
     else {
-      const { obj: text, mtl } = toOBJ(obj, `${id}-edited`);
+      const { obj: text, mtl } = toOBJ(obj, base);
       const zip = new (await loadZip())();
-      zip.file(`${id}-edited.obj`, text);
-      zip.file(`${id}-edited.mtl`, mtl);
-      [blob, name] = [await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' }), `${id}-edited-obj.zip`];
+      zip.file(`${base}.obj`, text);
+      zip.file(`${base}.mtl`, mtl);
+      [blob, name] = [await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' }), `${base}-obj.zip`];
     }
     download(blob, name);
-    msg(`${name} (${(blob.size / 1024 / 1024).toFixed(1)} MB)`);
-  } catch (err) { msg('สร้างไฟล์ไม่สำเร็จ: ' + err.message); }
-  finally { b.disabled = false; selBox.visible = was; }
-}));
+    $('pv-msg').textContent = `✓ ${name} (${(blob.size / 1024 / 1024).toFixed(1)} MB)`;
+  } catch (err) { $('pv-msg').textContent = 'สร้างไฟล์ไม่สำเร็จ: ' + err.message; }
+  finally { $('pv-go').disabled = false; }
+});
 
 // ---------- Toolbar & keys ----------
 function setMode(m) {
-  tc.setMode(m);
+  if (tool !== 'select') setTool('select');
+  mode = m;
+  if (!handleSel) tc.setMode(m);
   document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
 }
 document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
@@ -503,30 +1478,53 @@ $('snap').addEventListener('click', () => {
   tc.setTranslationSnap(on ? 0.01 : null);
   tc.setRotationSnap(on ? THREE.MathUtils.degToRad(5) : null);
   tc.setScaleSnap(on ? 0.05 : null);
+  $('snap').textContent = on ? 'Snap 10 mm' : 'Snap ปิด';
 });
 $('glass').addEventListener('click', () => $('glass').classList.toggle('on'));
-$('play').addEventListener('click', () => {
-  playing = !playing;
-  $('play').textContent = playing ? '❚❚ หยุด' : '▶ เล่น';
-  $('play').classList.toggle('on', playing);
-  if (!playing) build(); // back to the start pose, where the edits apply
-});
 $('pick').addEventListener('change', e => load(e.target.value));
 
 addEventListener('keydown', e => {
-  if (e.target.matches('input, select, textarea')) return;
-  const k = e.key.toLowerCase();
-  if ((e.ctrlKey || e.metaKey) && k === 'z') { e.preventDefault(); e.shiftKey ? redoOp() : undo(); return; }
-  if ((e.ctrlKey || e.metaKey) && k === 'y') { e.preventDefault(); redoOp(); return; }
-  if ((e.ctrlKey || e.metaKey) && k === 'd') { e.preventDefault(); duplicate(); return; }
-  if (e.ctrlKey || e.metaKey || e.altKey) return;
-  if (k === 'w') setMode('translate');
+  if (!$('pv').hidden) { if (e.key === 'Escape') closePreview(); return; }
+  if (e.target.matches('input, select, textarea')) { if (e.key === 'Escape') e.target.blur(); return; }
+  const k = e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
+  if (ctrl && k === 'z') { e.preventDefault(); e.shiftKey ? redoOp() : undo(); return; }
+  if (ctrl && k === 'y') { e.preventDefault(); redoOp(); return; }
+  if (ctrl && k === 'd') { e.preventDefault(); duplicate(); return; }
+  if (ctrl && k === 's') { e.preventDefault(); saveProject(); return; }
+  if (ctrl && k === 'e') { e.preventDefault(); openPreview(); return; }
+  if (ctrl || e.altKey) return;
+  // While drawing a pipe / wire
+  if (draft) {
+    if (k === 'enter') { finishLine(); return; }
+    if (k === 'backspace') { e.preventDefault(); draft.points.pop(); if (!draft.points.length) cancelDraft(); else { refreshDraft(); updateGuide(); } return; }
+    if (k === 'escape') { cancelDraft(); return; }
+  }
+  if (k === 'escape') {
+    if (tool !== 'select') setTool('select');
+    else if (handleSel) pickHandle(null);
+    else if (selKey) { selKey = null; renderTimeline(); }
+    else select(null);
+    return;
+  }
+  if (k === ' ') { e.preventDefault(); playing ? stop() : play(); return; }
+  if (k === 'v') setTool('select');
+  else if (k === 'b') setTool('box');
+  else if (k === 't') setTool('pipe');
+  else if (k === 'l') setTool('wire');
+  else if (k === 'w') setMode('translate');
   else if (k === 'e') setMode('rotate');
   else if (k === 'r') setMode('scale');
+  else if (k === 'k') addKey();
+  else if (k === 'home') setTime(0);
+  else if (k === 'end') setTime(anim.duration);
+  else if (k === 'arrowleft' || k === 'arrowright') { e.preventDefault(); setTime(Math.round((time + (k === 'arrowright' ? 1 : -1) * (e.shiftKey ? 1 : 0.1)) * 100) / 100); }
   else if (k === 'p' && selected) select(selected.parent);
   else if (k === 'h') toggleHide();
-  else if (k === 'delete' || k === 'backspace') remove();
-  else if (k === 'escape') select(null);
+  else if ((k === 'delete' || k === 'backspace') && tool === 'select') {
+    if (handleSel) deleteHandle();
+    else if (currentKey()) deleteKey();
+    else remove();
+  }
   else if (k === 'f') selected ? frame(boundsOf(selected)) : frameAll();
 });
 
@@ -551,23 +1549,50 @@ function resize() {
   renderer.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
+  resizePreview();
+  updateClock();
 }
 addEventListener('resize', resize);
 resize();
 
-function msg(t) { $('msg').textContent = t; }
+let toastTimer = 0;
+function toast(t) {
+  $('toast').textContent = t;
+  $('toast').classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $('toast').classList.remove('show'), 2600);
+}
 
 const want = new URLSearchParams(location.search).get('m');
 load(MODELS[want] ? want : Object.keys(MODELS)[0]);
+sizeTimeline();
 
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
-  if (playing && !dragging) { machine.update(dt); if (selected) updateBox(); }
+  if (!$('pv').hidden) {
+    // Only the preview renders while it is open.
+    pv.controls.autoRotate = pv.spin;
+    if (pv.mixer && pv.playing) pv.mixer.update(dt);
+    pv.controls.update();
+    pv.renderer.render(pv.scene, pv.camera);
+    return;
+  }
+  if (playing && !dragging) {
+    time += dt * +$('tl-speed').value;
+    if (time >= anim.duration) {
+      if (anim.loop !== false) time %= anim.duration;
+      else { time = anim.duration; stop(); }
+    }
+    if ($('tl-builtin').checked) { machine.update(dt * +$('tl-speed').value); builtinRan = true; }
+    applyPose();
+    if (selected) { updateBox(); placeHandles(); }
+    updateClock();
+  }
   orbit.update();
   renderer.render(scene, camera);
 });
-window.__editor = { get machine() { return machine; }, get ops() { return ops; }, select: p => select(nodeAt(machine.object, p)), get selected() { return selected; } };
+window.__editor = { get machine() { return machine; }, get ops() { return ops; }, get anim() { return anim; }, select: p => select(nodeAt(machine.object, p)), get selected() { return selected; }, setTime, setTool, addKey, openPreview };
 </script>
 </body>
 </html>

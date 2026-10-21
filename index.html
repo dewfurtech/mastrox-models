@@ -70,18 +70,24 @@
     <button class="btn2" data-exp="glb">Blender <small>.glb</small></button>
     <button class="btn2" data-exp="stl">STL <small>.stl</small></button>
   </div>
+  <button class="btn2" id="exp-all-low" style="width:100%;margin-top:6px">Low poly ทุกรุ่น <small>.glb ใน zip</small></button>
   <p id="exp-msg"></p>
   <a class="back" href="list.html">← รายการเครื่องทั้งหมด</a>
   <a class="back" id="edit-link" href="editor.html" style="display:block;margin-top:8px">แก้ไขรุ่นนี้ใน Editor →</a>
+  <a class="back" id="draw-link" href="drawing.html" style="display:block;margin-top:8px">ภาพ 2D 4 ด้านของรุ่นนี้ →</a>
 </div>
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { MODELS } from './machines/registry.js';
 import { MACHINES } from './data/machines.js';
 import { toDAE, toOBJ, toSTL, toGLB } from './export.js';
 import { applyEdits, loadEdits, boundsOf } from './edits.js';
+import { loadAnim, hasKeys, poseAt, timeOf, toClip } from './anim.js';
+let userAnim = null, userClock = 0;
+import { lowPolyMachine } from './lowpoly.js';
 
 const $ = id => document.getElementById(id);
 const app = $('app');
@@ -122,10 +128,15 @@ const grid = new THREE.GridHelper(12, 24, '#a9adb1', '#bcc0c3');
 grid.position.y = 0.001;
 scene.add(grid);
 
+// Environment lighting for models built with reflective materials (the detailed 3500A); the others keep the plain lights.
+const roomEnv = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+
 const byId = Object.fromEntries(MACHINES.map(m => [m.id, m]));
 $('pick').innerHTML = Object.keys(MODELS).map(id => `<option value="${id}">${byId[id]?.name ?? id}</option>`).join('');
 
 let machine = null, labels = [], infoTimer = 0;
+// Detail level: 'high' = full model, 'low' = static low-poly copy for placing in layouts (lowpoly.js).
+let lod = new URLSearchParams(location.search).get('lod') === 'low' ? 'low' : 'high';
 const mm = v => Math.round(v * 1000).toLocaleString('en');
 
 // One on/off row; `fn(true|false)` runs on click.
@@ -149,16 +160,24 @@ function load(id) {
   // Changes saved from editor.html for this machine, if any.
   const edits = loadEdits(id);
   applyEdits(machine.object, edits);
+  // Keyframes from the editor (full detail only: low poly merges the parts they move).
+  userAnim = lod === 'high' && hasKeys(loadAnim(id)) ? loadAnim(id) : null;
+  userClock = 0;
+  if (lod === 'low') machine = lowPolyMachine(machine);
   scene.add(machine.object);
-  history.replaceState(null, '', `?m=${id}`);
+  scene.environment = machine.object.userData.environment ? roomEnv : null;
+  scene.environmentIntensity = 0.85;
+  history.replaceState(null, '', `?m=${id}${lod === 'low' ? '&lod=low' : ''}`);
   $('pick').value = id;
   document.title = `${byId[id]?.name ?? id} 3D`;
   infoTimer = 0; // refresh the info line on the next frame
   const note = byId[id]?.modelNote;
-  $('note').hidden = !note && !edits.length;
+  $('note').hidden = !note && !edits.length && !userAnim;
   $('note').innerHTML = (note ? `<b><span class="dot"></span>โมเดลยังไม่สมบูรณ์</b><br>${note}` : '')
-    + (edits.length ? `${note ? '<br>' : ''}<b>แก้ไขจาก Editor แล้ว ${edits.length} รายการ</b>` : '');
+    + (edits.length ? `${note ? '<br>' : ''}<b>แก้ไขจาก Editor แล้ว ${edits.length} รายการ</b>` : '')
+    + (userAnim ? `${note || edits.length ? '<br>' : ''}<b>เล่นแอนิเมชันคีย์เฟรมจาก Editor</b>` : '');
   $('edit-link').href = `editor.html?m=${id}`;
+  $('draw-link').href = `drawing.html?m=${id}`;
 
   // Measure the machine without its moving workpiece.
   // (Skipped in place, not detached: some workpieces ride on a moving table or platen.)
@@ -188,9 +207,16 @@ function load(id) {
   });
 
   $('rows').innerHTML = '';
+  toggleRow('รายละเอียด', 'เต็ม', 'Low poly', lod === 'high', v => { lod = v ? 'high' : 'low'; load(id); });
   const o = machine.open;
   if (o) toggleRow(o.label, o.on ?? 'เปิด', o.off ?? 'ปิด', o.initial ?? false, v => o.set(v));
+  for (const t of machine.toggles || []) toggleRow(t.label, t.on ?? 'เปิด', t.off ?? 'ปิด', t.initial ?? false, v => t.set(v));
   if (machine.workpiece) toggleRow(machine.pieceLabel ?? 'ชิ้นงาน', 'แสดง', 'ซ่อน', true, v => (machine.workpiece.visible = v));
+  const zones = machine.object.children.filter(c => c.userData.operatorZone);
+  if (zones.length) toggleRow('จุดยืนทำงาน', 'แสดง', 'ซ่อน', true, v => {
+    zones.forEach(z => (z.visible = v && !z.userData.deleted && !z.userData.hidden));
+    labels.forEach(l => { if (l.element.textContent === 'จุดยืนทำงาน') l.element.style.display = v ? '' : 'none'; });
+  });
   if (labels.length) toggleRow('ป้ายชื่อ', 'แสดง', 'ซ่อน', true, v => labels.forEach(l => (l.visible = v)));
   toggleRow('มุมกล้อง', 'ด้านหน้า', 'ด้านหลัง', true, v => setView(v ? 'a' : 'b'));
   setView('a');
@@ -230,6 +256,7 @@ const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   machine.update(dt);
+  if (userAnim) { userClock += dt; poseAt(machine.object, userAnim, timeOf(userAnim, userClock)); }
   infoTimer -= dt;
   if (infoTimer <= 0) {
     $('info').textContent = typeof machine.info === 'function' ? machine.info() : machine.info ?? '';
@@ -240,6 +267,8 @@ renderer.setAnimationLoop(() => {
   labelRenderer.render(scene, camera);
 });
 window.__machine = () => machine;
+// For checking a model from a set camera position: __look([x, y, z], [tx, ty, tz])
+window.__look = (pos, target) => { camera.position.set(...pos); controls.target.set(...target); controls.update(); };
 
 // Export the current machine, posed as it is on screen. OBJ + MTL go out together in a zip.
 const HINT = {
@@ -266,11 +295,11 @@ async function loadZip() {
   return window.JSZip;
 }
 async function buildExport(kind) {
-  const id = $('pick').value, title = byId[id]?.name ?? id;
+  const id = $('pick').value + (lod === 'low' ? '-lowpoly' : ''), title = (byId[$('pick').value]?.name ?? id) + (lod === 'low' ? ' (low poly)' : '');
   const obj = machine.object;
   if (kind === 'dae') return [new Blob([toDAE(obj, title)], { type: 'model/vnd.collada+xml' }), `${id}.dae`];
   if (kind === 'stl') return [new Blob([toSTL(obj)], { type: 'model/stl' }), `${id}.stl`];
-  if (kind === 'glb') return [new Blob([await toGLB(obj)], { type: 'model/gltf-binary' }), `${id}.glb`];
+  if (kind === 'glb') return [new Blob([await toGLB(obj, userAnim ? [toClip(obj, userAnim)] : [])], { type: 'model/gltf-binary' }), `${id}.glb`];
   const { obj: text, mtl } = toOBJ(obj, id);
   const zip = new (await loadZip())();
   zip.file(`${id}.obj`, text);
@@ -278,6 +307,28 @@ async function buildExport(kind) {
   return [await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' }), `${id}-obj.zip`];
 }
 window.__buildExport = buildExport;
+$('exp-all-low').addEventListener('click', async e => {
+  const b = e.currentTarget;
+  b.disabled = true;
+  try {
+    const zip = new (await loadZip())();
+    const ids = Object.keys(MODELS);
+    for (const [i, id] of ids.entries()) {
+      $('exp-msg').textContent = `กำลังสร้าง low poly ${i + 1}/${ids.length}: ${byId[id]?.name ?? id}…`;
+      await new Promise(r => setTimeout(r, 0));   // let the message paint
+      const m = MODELS[id]();
+      applyEdits(m.object, loadEdits(id));
+      zip.file(`${id}-lowpoly.glb`, await toGLB(lowPolyMachine(m).object));
+    }
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+    save(blob, 'mastrox-lowpoly-glb.zip');
+    $('exp-msg').textContent = `mastrox-lowpoly-glb.zip (${(blob.size / 1024 / 1024).toFixed(1)} MB) · ${ids.length} รุ่น · ${HINT.glb}`;
+  } catch (err) {
+    $('exp-msg').textContent = 'สร้างไฟล์ไม่สำเร็จ: ' + err.message;
+  } finally {
+    b.disabled = false;
+  }
+});
 document.querySelectorAll('[data-exp]').forEach(b => b.addEventListener('click', async () => {
   const kind = b.dataset.exp;
   b.disabled = true;
