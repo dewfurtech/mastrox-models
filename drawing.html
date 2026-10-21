@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mastrox 2D 4 ด้าน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --text: #0b0b0b; --text-2: #3a3a3a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e9ebed; color: var(--text); font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 16px;
+    background: rgba(255,255,255,.75); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(0,0,0,.08); }
+  select { height: 38px; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,.15); background: #fff; font: inherit; font-size: 15px; font-weight: 600; min-width: 220px; }
+  button { height: 38px; padding: 0 14px; border-radius: 8px; border: 1px solid rgba(0,0,0,.12); background: #fff; font: inherit; font-size: 14px; cursor: pointer; }
+  button:hover { background: #f3f4f6; }
+  button.primary { background: #0b0b0b; color: #fff; border-color: #0b0b0b; }
+  button:disabled { opacity: .5; cursor: progress; }
+  #msg { font-size: 13px; color: var(--text-2); min-width: 160px; }
+  a { color: var(--text); font-size: 14px; margin-left: auto; }
+  main { padding: 16px; }
+  #sheet { display: block; width: 100%; max-width: 1400px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+  .hint { max-width: 1400px; margin: 10px auto 0; font-size: 13px; color: var(--text-2); line-height: 1.5; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<header>
+  <select id="pick" aria-label="เลือกเครื่อง"></select>
+  <button id="save" class="primary">บันทึก PNG รุ่นนี้</button>
+  <button id="save-all">บันทึกทุกรุ่น (.zip)</button>
+  <span id="msg"></span>
+  <a id="to3d" href="index.html">ดูโมเดล 3D →</a>
+</header>
+<main>
+  <canvas id="sheet"></canvas>
+  <p class="hint">ภาพนิ่ง 4 ด้าน (หน้า / หลัง / ซ้าย / ขวา) จากโมเดล 3D ตามท่าตั้งต้น ไม่แสดงชิ้นงาน · สเกลเดียวกันทุกด้าน · เส้นบอกขนาดเป็น mm จากขนาดโมเดลที่วัดได้ · PNG กว้าง 2,000 px</p>
+</main>
+<script type="module">
+import * as THREE from 'three';
+import { MODELS } from './machines/registry.js';
+import { MACHINES } from './data/machines.js';
+import { applyEdits, loadEdits, boundsOf } from './edits.js';
+import { createViews2D, rowsFor } from './views2d.js';
+
+const $ = id => document.getElementById(id);
+const W = 2000, UI = 2; // sheet width in px; titles, margins and lines drawn twice the on-screen size
+const byId = Object.fromEntries(MACHINES.map(m => [m.id, m]));
+const nameOf = id => byId[id]?.name ?? id;
+$('pick').innerHTML = Object.keys(MODELS).map(id => `<option value="${id}">${nameOf(id)}</option>`).join('');
+
+// Drawn off screen at full size; the page shows a scaled copy.
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+const overlay = document.createElement('canvas');
+const views = createViews2D(renderer, overlay, { ui: UI, line: 2 });
+
+function dispose(root) {
+  root.traverse(o => {
+    if (!o.isMesh) return;
+    o.geometry.dispose();
+    const tex = o.material.map;
+    if (tex && typeof tex.dispose === 'function') { tex.dispose(); o.material.dispose(); } // decals own their canvas texture
+  });
+}
+
+// The machine as built (plus any editor changes), at rest, without its workpiece.
+function draw(id) {
+  const m = MODELS[id]();
+  applyEdits(m.object, loadEdits(id));
+  if (m.workpiece) m.workpiece.visible = false;
+  for (const c of m.object.children) if (c.userData.operatorZone) c.visible = false; // floor pad only matters in 3D
+  m.object.updateMatrixWorld(true);
+  const bounds = boundsOf(m.object, m.workpiece);
+  const rows = rowsFor(bounds.getSize(new THREE.Vector3()));
+  const top = 40 * UI;
+  const H = Math.ceil(views.measure(bounds, W, rows).h + top);
+  renderer.setSize(W, H, false);
+  overlay.width = W; overlay.height = H;
+  views.invalidate();
+  views.render(m, bounds, { x: 0, y: top, w: W, h: 0 }, rows);
+  const png = views.snapshot(nameOf(id));
+  dispose(m.object);
+  return png;
+}
+
+function show(id) {
+  const png = draw(id);
+  const sheet = $('sheet');
+  sheet.width = png.width; sheet.height = png.height;
+  sheet.getContext('2d').drawImage(png, 0, 0);
+  history.replaceState(null, '', `?m=${id}`);
+  $('pick').value = id;
+  $('to3d').href = `index.html?m=${id}`;
+  document.title = `${nameOf(id)} 2D`;
+}
+
+const blobOf = c => new Promise(ok => c.toBlob(ok, 'image/png'));
+function save(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+async function loadZip() {
+  if (window.JSZip) return window.JSZip;
+  await new Promise((ok, fail) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    s.onload = ok; s.onerror = () => fail(new Error('โหลด JSZip ไม่ได้'));
+    document.head.appendChild(s);
+  });
+  return window.JSZip;
+}
+
+$('pick').addEventListener('change', e => show(e.target.value));
+$('save').addEventListener('click', async () => {
+  const id = $('pick').value;
+  save(await blobOf($('sheet')), `${id}-2d-4views.png`);
+});
+$('save-all').addEventListener('click', async () => {
+  const btn = $('save-all');
+  btn.disabled = true;
+  try {
+    const zip = new (await loadZip())();
+    const ids = Object.keys(MODELS);
+    for (const [i, id] of ids.entries()) {
+      $('msg').textContent = `กำลังวาด ${nameOf(id)} (${i + 1}/${ids.length})`;
+      await new Promise(r => setTimeout(r)); // let the message paint
+      zip.file(`${id}-2d-4views.png`, await blobOf(draw(id)));
+    }
+    $('msg').textContent = 'กำลังบีบอัด…';
+    save(await zip.generateAsync({ type: 'blob' }), 'mastrox-2d-4views.zip');
+    $('msg').textContent = `บันทึก ${ids.length} รุ่นแล้ว`;
+  } catch (e) {
+    $('msg').textContent = 'ไม่สำเร็จ: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    show($('pick').value);
+  }
+});
+
+await document.fonts.load('600 30px "IBM Plex Sans Thai"').catch(() => {});
+const want = new URLSearchParams(location.search).get('m');
+show(MODELS[want] ? want : 'booster-e6');
+</script>
+</body>
+</html>

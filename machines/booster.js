@@ -1,9 +1,14 @@
 import * as THREE from 'three';
-import { M, box, cyl, decal, logo, warning, tube, button } from './lib.js';
+import { M, box, cyl, decal, logo, warning, tube, button, std } from './lib.js';
+
+// Body panels: slate grey from the user's colour sample (21 Oct 2026).
+const BODY = std('#454b53', { roughness: 0.75 });
 
 // Mastrox Booster edge banders (e6 / e7 / e10, sold earlier as Booster 05 / 06 / 08).
 // Built in meters with the origin on the floor under the machine's center.
-// Panels feed along +x; +z is the operator side (orange roller rail), −z the amber-window side.
+// Panels feed along +x; the orange roller rail is on one long side, the amber windows on the other.
+// The parts are built with the rail toward +z, then the whole machine is turned round at the end so
+// the amber-window side (the brochure "front") faces +z and the roller / conveyor side faces −z.
 // e6 follows the real photos in "machine docs/Booster e6"; e7 and e10 reuse that body
 // at their brochure sizes, with the extra stations their brochures list.
 
@@ -41,7 +46,6 @@ export const BOOSTERS = {
     stations: ['premill', 'glue', 'press', 'end', 'fine', 'contour', 'scrape', 'flat', 'spray', 'buff'],
     mullions: [-0.62, 0.02, 0.66],
     split: 0.02, // e10's housing is two cabinets joined here
-    topPort: true,
   },
 };
 
@@ -177,10 +181,60 @@ export function stationRib(g, x, yTop) {
   g.add(box(0.06, yTop - 0.83, 0.15, M.frame, x + 0.13, (0.83 + yTop) / 2, ZT - 0.045));
 }
 
+// Induction motor with its axis along +x, mounted on the end face at x = xEnd.
+const MOTOR_GREY = std('#5a5e63', { roughness: 0.55, metalness: 0.35 });
+let grilleMat = null;
+function feedMotor(xEnd, y, z) {
+  if (!grilleMat) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d');
+    g.fillStyle = '#4a4e53'; g.fillRect(0, 0, 128, 128);
+    g.fillStyle = '#15171a';
+    for (let i = 6; i < 122; i += 9) for (let j = 6; j < 122; j += 9) if (Math.hypot(i - 60, j - 60) < 56) g.fillRect(i, j, 6, 6);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    grilleMat = std('#ffffff', { map: tex, roughness: 0.6, metalness: 0.3 });
+  }
+  const g = new THREE.Group();
+  g.name = 'FeedMotor';
+  g.position.set(xEnd, y, z);
+  g.add(box(0.03, 0.24, 0.24, M.frame, 0.015, 0, 0));                                  // bracket plate on the end cap
+  g.add(box(0.16, 0.18, 0.13, MOTOR_GREY, 0.11, 0, 0));                                // right-angle gearbox
+  // The motor itself, built along +x, then turned 90° so it runs across the machine with the fan grille
+  // facing the amber side (photo).
+  const m = new THREE.Group();
+  m.rotation.y = Math.PI / 2;
+  m.position.set(0.11, 0, -0.065 + 0.03);
+  g.add(m);
+  const R = 0.1, BODY_L = 0.2;
+  m.add(cyl(R + 0.02, 0.025, MOTOR_GREY, 0.045, 0, 0, 'x', 28));                      // mounting flange
+  m.add(cyl(R, BODY_L, MOTOR_GREY, 0.06 + BODY_L / 2, 0, 0, 'x', 28));                 // body
+  for (let i = 0; i < 14; i++) {                                                        // cooling fins
+    const a = i * Math.PI * 2 / 14;
+    const fin = box(BODY_L - 0.02, 0.016, 0.004, MOTOR_GREY, 0.06 + BODY_L / 2, Math.cos(a) * (R + 0.006), Math.sin(a) * (R + 0.006));
+    fin.rotation.x = a;
+    m.add(fin);
+  }
+  const capX = 0.06 + BODY_L;
+  m.add(cyl(R + 0.008, 0.07, MOTOR_GREY, capX + 0.035, 0, 0, 'x', 28));               // fan cover
+  const grille = new THREE.Mesh(new THREE.CircleGeometry(R - 0.004, 28), grilleMat);    // square-mesh end
+  grille.rotation.y = Math.PI / 2;
+  grille.position.x = capX + 0.071;
+  m.add(grille);
+  m.add(box(0.1, 0.07, 0.09, M.frame, 0.06 + BODY_L * 0.55, R + 0.04, 0));             // terminal box
+  m.add(warning(0.06 + BODY_L * 0.55, R + 0.035, 0.046, 0, 0.7));                      // its yellow sticker, facing out
+  m.add(cyl(0.012, 0.03, M.frame, 0.06 + BODY_L * 0.55, R + 0.045, -0.06, 'z', 12));   // cable gland
+  return g;
+}
+
 export function createBooster(id) {
   const cfg = BOOSTERS[id];
   const L = cfg.length, X0 = -L / 2, X1 = L / 2;
-  const Z_BACK = -cfg.depth / 2, Z_FRONT = cfg.depth / 2;
+  // Body depth: the brochure figure looked too thin next to the real machines, so it is drawn 1.4× deeper
+  // (user's call, 21 Oct 2026). Cabinet, hood, rail and roller supports all follow from it.
+  const DEPTH = cfg.depth * 1.4;
+  const Z_BACK = -DEPTH / 2, Z_FRONT = DEPTH / 2;
   const root = new THREE.Group();
   root.name = cfg.name;
 
@@ -191,29 +245,38 @@ export function createBooster(id) {
   // Lower cabinet, recessed on the operator side under the rail.
   {
     const zb = Z_BACK, zf = Z_FRONT - 0.168, cz = (zb + zf) / 2, d = zf - zb;
-    root.add(box(L, 0.72, d, M.body, 0, 0.44, cz));
+    root.add(box(L, 0.72, d, BODY, 0, 0.44, cz));
     root.add(box(L + 0.01, 0.03, d + 0.01, M.frame, 0, 0.815, cz));
     const zDoor = zb - 0.002;
-    // Doors on the back side, two per cabinet.
-    const edges = cfg.split != null ? [X0 + 0.12, cfg.split, X1 - 0.24] : [X0 + 0.12, X1 - 0.24];
+    // Doors on the amber side, two per cabinet, covering the whole face end to end and from the top
+    // band down to the plinth (photo of the Booster 05 / e6).
+    const edges = cfg.split != null ? [X0 + 0.008, cfg.split, X1 - 0.008] : [X0 + 0.008, X1 - 0.008];
     const doors = [];
     for (let i = 0; i < edges.length - 1; i++) {
       const mid = (edges[i] + edges[i + 1]) / 2;
       doors.push([edges[i], mid], [mid, edges[i + 1]]);
     }
+    const DY0 = 0.095, DY1 = 0.795, DH = DY1 - DY0, DC = (DY0 + DY1) / 2;
     for (const [x0, x1] of doors) {
-      root.add(box(x1 - x0 - 0.012, 0.6, 0.004, M.body, (x0 + x1) / 2, 0.46, zDoor - 0.001));
-      root.add(box(0.006, 0.6, 0.004, M.frame, x1, 0.46, zDoor));
-      for (const hx of [x0 + 0.06, x1 - 0.06]) root.add(cyl(0.008, 0.01, M.steel, hx, 0.71, zDoor - 0.006, 'z', 12));
-      root.add(warning((x0 + x1) / 2, 0.69, zDoor - 0.004, Math.PI));
+      root.add(box(x1 - x0 - 0.008, DH, 0.006, BODY, (x0 + x1) / 2, DC, zDoor - 0.002));
+      root.add(box(0.006, DH, 0.004, M.frame, x1, DC, zDoor));
+      for (const hx of [x0 + 0.06, x1 - 0.06]) root.add(cyl(0.009, 0.01, M.steel, hx, DY1 - 0.05, zDoor - 0.008, 'z', 12));
+      root.add(warning((x0 + x1) / 2 - (x1 - x0) * 0.25, DY1 - 0.09, zDoor - 0.009, Math.PI));
     }
-    const back = logo(0.42, '#e9e9e9');
-    back.position.set(X1 - 0.5, 0.3, zDoor - 0.005);
+    // Big mastrox logo across the lower part of the left-hand door (as seen from the amber side), in the
+    // rounded thin brand font, "mas" light grey and "trox" orange (photo of the Booster 05 / e6).
+    // Comfortaa is loaded by rakete-real.js, which registry.js imports first.
+    const [da, db] = doors[doors.length - 1];             // the door at X1: left-hand from the amber side
+    const lw = Math.min(0.95, (db - da) * 0.72);
+    const back = decal('mastrox', { w: lw, accent: ['mas', 'trox'], color: '#e4e4e2', font: '300 130px Comfortaa, "IBM Plex Sans Thai", sans-serif' });
+    back.geometry.computeBoundingBox();
+    const lh = back.geometry.boundingBox.max.y - back.geometry.boundingBox.min.y;
+    back.position.set(db - (db - da) * 0.47, DY0 + 0.03 + lh / 2, zDoor - 0.01);
     back.rotation.y = Math.PI;
     root.add(back);
     const strip = decal(cfg.name, { w: 0.36, color: '#1d1f22', bg: '#f07a22', font: '400 110px "IBM Plex Sans Thai", sans-serif' });
     strip.rotation.set(0, Math.PI, Math.PI / 2);
-    strip.position.set(X0 + 0.17, 0.4, zDoor - 0.005);
+    strip.position.set(X0 + 0.17, 0.4, zDoor - 0.01);
     root.add(strip);
     root.add(box(0.07, 0.07, 0.04, M.yellow, X0 + 0.07, 0.66, zb - 0.02));
     root.add(cyl(0.022, 0.03, M.red, X0 + 0.07, 0.66, zb - 0.05, 'z'));
@@ -257,24 +320,19 @@ export function createBooster(id) {
   // Pressure beam over the chain, holding the top belt that clamps the panel.
   {
     const zc = 0.075, y0 = 0.975;
-    root.add(box(L - 0.14, HEIGHT - y0, 0.17, M.body, -0.02, (y0 + HEIGHT) / 2, zc));
+    root.add(box(L - 0.14, HEIGHT - y0, 0.17, BODY, -0.02, (y0 + HEIGHT) / 2, zc));
     root.add(box(L - 0.14, 0.03, 0.12, M.frame, -0.02, y0 - 0.015, 0.05));
     const wheels = Math.floor((L - 0.3) / 0.11);
     for (let i = 0; i < wheels; i++) root.add(cyl(0.022, 0.07, M.chain, X0 + 0.22 + i * 0.11, WORK_Y + 0.06, 0.05, 'z', 16));
     const front = logo(0.62);
-    front.position.set(-0.25, 1.16, zc + 0.086);
+    front.position.set(-0.25, 1.16, zc + 0.09);
     root.add(front);
     const strip = decal(cfg.name, { w: 0.28, color: '#1d1f22', bg: '#f07a22', font: '400 110px "IBM Plex Sans Thai", sans-serif' });
     strip.rotation.z = Math.PI / 2;
-    strip.position.set(X1 - 0.17, 1.16, zc + 0.086);
+    strip.position.set(X1 - 0.17, 1.16, zc + 0.09);
     root.add(strip);
-    const crank = new THREE.Group();
-    crank.add(box(0.03, 0.14, 0.02, M.frame, 0, -0.05, 0));
-    crank.add(cyl(0.012, 0.07, M.steel, 0, -0.11, 0.04, 'z', 12));
-    crank.add(cyl(0.03, 0.03, M.frame, 0, 0, 0, 'z', 16));
-    crank.position.set(X1 - 0.055, 1.21, zc + 0.1);
-    crank.rotation.y = Math.PI / 2;
-    root.add(crank);
+    // No height crank on the beam end (removed at the user's request); an empty slot keeps editor paths.
+    root.add(new THREE.Group());
   }
 
   // Tools, dust hoses, feed motor.
@@ -283,8 +341,10 @@ export function createBooster(id) {
   for (const s of stations.filter(s => DUSTY.has(s.id))) {
     root.add(tube([[s.x, 1.0, -0.2], [s.x + 0.06, 1.18, Z_BACK + 0.05], [s.x + 0.1, 1.27, -0.15]], 0.026));
   }
-  root.add(cyl(0.09, 0.2, M.motor, X1 + 0.08, 0.97, -0.12, 'x'));
-  root.add(cyl(0.095, 0.02, M.frame, X1 + 0.18, 0.97, -0.12, 'x'));
+  // Feed motor on the outfeed end (photo): grey finned body lying along the feed, square-mesh fan cover
+  // on the outer end, black terminal box on top, bolted through a flange to a bracket on the end cap.
+  // (Two children, as the old motor had, so editor edits saved by part path stay on the right parts.)
+  root.add(feedMotor(X1, 0.95, 0.0), new THREE.Group());
 
   // Amber hood over the back half, hinged at the pressure beam so the whole cover tips up.
   let hoodPivot;
@@ -303,14 +363,12 @@ export function createBooster(id) {
       add(box(t, y1 - y0 - 0.03, dz, M.amber, x, (y0 + y1) / 2, zm));
       add(box(0.016, y1 - y0, 0.016, M.frame, x, (y0 + y1) / 2, Z_BACK + 0.008));
     }
-    if (cfg.split != null) add(box(0.05, y1 - y0, dz, M.body, cfg.split, (y0 + y1) / 2, zm));
-    root.add(box(0.07, y1 - y0, dz, M.body, X0 + 0.035, (y0 + y1) / 2, zm));
-    root.add(box(0.07, y1 - y0, dz, M.body, X1 - 0.035, (y0 + y1) / 2, zm));
-    if (cfg.topPort) {
-      // e10's grey extraction box sitting on the beam.
-      root.add(box(0.2, 0.1, 0.16, M.alu, 0.1, HEIGHT + 0.05, 0.06));
-      root.add(cyl(0.05, 0.06, M.alu, 0.1, HEIGHT + 0.13, 0.06));
-    }
+    if (cfg.split != null) add(box(0.05, y1 - y0, dz, BODY, cfg.split, (y0 + y1) / 2, zm));
+    root.add(box(0.07, y1 - y0, dz, BODY, X0 + 0.035, (y0 + y1) / 2, zm));
+    root.add(box(0.07, y1 - y0, dz, BODY, X1 - 0.035, (y0 + y1) / 2, zm));
+    // No dust port on top of the beam (the real Boosters don't have one). Two empty slots stand where its
+    // two parts were, so editor edits saved by part path still land on the right parts.
+    root.add(new THREE.Group(), new THREE.Group());
     root.add(hoodPivot);
   }
 
@@ -330,16 +388,18 @@ export function createBooster(id) {
 
     // The face points toward −z, so +x here is the viewer's left: screen left, switches right.
     const panel = new THREE.Group();
-    panel.add(box(0.44, 0.3, 0.11, M.body, 0, 0, 0));
+    panel.add(box(0.44, 0.3, 0.11, BODY, 0, 0, 0));
     panel.add(box(0.2, 0.13, 0.01, M.screen, 0.06, 0.04, -0.056));
     panel.add(box(0.07, 0.035, 0.01, M.frame, -0.15, 0.1, -0.056));
     for (const x of [0.15, 0.08, 0.01]) panel.add(button(M.frame, x, -0.1, -0.065));
     panel.add(button(M.green, -0.15, 0.03, -0.065));
     panel.add(button(M.red, -0.15, -0.07, -0.065, 0.022));
-    panel.position.set(X0 + 0.05, 1.19, Z_BACK + 0.1);
-    panel.rotation.y = 0.5;
+    // Hangs just past the infeed end on a bracket off the end cap, above the coil table,
+    // facing the amber side.
+    panel.position.set(X0 - 0.3, 1.2, Z_BACK + 0.12);
     root.add(panel);
-    root.add(box(0.06, 0.2, 0.06, M.frame, X0 + 0.09, 0.98, Z_BACK + 0.15));
+    root.add(box(0.18, 0.06, 0.06, M.frame, X0 - 0.08, 1.2, Z_BACK + 0.14)); // bracket
+    root.add(box(0.06, 0.06, 0.16, M.frame, X0 - 0.03, 1.2, Z_BACK + 0.08)); // foot on the end cap
   }
 
   const glow = new THREE.PointLight('#ffae52', 0.6, L * 0.9, 1.5);
@@ -358,6 +418,10 @@ export function createBooster(id) {
   let hoodTarget = 0;
   const glueX = stations.find(s => s.id === 'glue').x;
 
+  // Turn the machine round: amber windows to +z (front), roller rail to −z (back), infeed at +x.
+  // Everything above is in the machine's own frame, so labels, the panel and editor paths stay put.
+  root.rotation.y = Math.PI;
+
   return {
     object: root,
     workpiece: piece,
@@ -365,7 +429,7 @@ export function createBooster(id) {
     open: { label: 'ฝาครอบ', set(v) { hoodTarget = v ? 1.1 : 0; } },
     pieceLabel: 'แผ่นงาน',
     info: `ป้อนแผ่น ${FEED * 60} m/min · ${stations.length} สถานี`,
-    views: { a: [L * 0.9, 2.0, 4.2], b: [-L * 0.95, 1.9, -4.0], target: [0, 0.85, 0] },
+    views: { a: [-L * 0.9, 2.0, 4.2], b: [L * 0.95, 1.9, -4.0], target: [0, 0.85, 0] },
     update(dt) {
       for (const { mesh, speed } of spin) mesh.rotation.y += speed * dt;
       hoodPivot.rotation.x += (hoodTarget - hoodPivot.rotation.x) * Math.min(1, dt * 4);

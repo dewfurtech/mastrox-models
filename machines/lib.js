@@ -107,3 +107,88 @@ export function foot(g, x, z, h = 0.06) {
   g.add(cyl(0.008, h, M.steel, x, h / 2, z, 'y', 10));
   g.add(cyl(0.03, 0.012, M.steel, x, 0.006, z, 'y', 20));
 }
+
+// Floor marker for where the operator stands to run the machine: a yellow pad with a hazard border
+// and two footprints pointing at the controls. `look` is the direction the operator faces, [x, z].
+// Other sites find it by name ("OperatorZone") or by userData.operatorZone (glTF: node extras):
+//   { position: [x, y, z], look: [x, z], size: [width, depth] }   meters, floor level, Y up
+const ZONE_MAT = {
+  fill: new THREE.MeshStandardMaterial({ color: '#f2c218', roughness: 0.8, transparent: true, opacity: 0.35, depthWrite: false }),
+  edge: std('#f2c218', { roughness: 0.6, metalness: 0 }),
+  dark: std('#1d1f22', { roughness: 0.8, metalness: 0 }),
+  foot: std('#1d1f22', { roughness: 0.8, metalness: 0, side: THREE.DoubleSide }), // the left foot is mirrored
+};
+
+function footprint(s) {
+  // Sole outline about 260 mm long, wide (toe) end at shape −y.
+  const p = new THREE.Shape();
+  p.moveTo(0, -0.13 * s);
+  p.bezierCurveTo(0.055 * s, -0.13 * s, 0.06 * s, -0.04 * s, 0.045 * s, 0.03 * s);
+  p.bezierCurveTo(0.04 * s, 0.1 * s, 0.035 * s, 0.13 * s, 0, 0.13 * s);
+  p.bezierCurveTo(-0.035 * s, 0.13 * s, -0.04 * s, 0.1 * s, -0.04 * s, 0.03 * s);
+  p.bezierCurveTo(-0.05 * s, -0.04 * s, -0.05 * s, -0.13 * s, 0, -0.13 * s);
+  const geo = new THREE.ShapeGeometry(p, 12);
+  geo.rotateX(-Math.PI / 2); // flat on the floor, facing up, toes on +z
+  geo.rotateY(Math.PI); // toes toward −z
+  return geo;
+}
+
+export function operatorZone({ x, z, look, w = 0.7, d = 0.6 }) {
+  const [lx, lz] = look;
+  const g = new THREE.Group();
+  g.name = 'OperatorZone';
+  g.position.set(x, 0, z);
+  g.rotation.y = Math.atan2(-lx, -lz); // local −z (the toes) points along `look`
+  const fill = new THREE.Mesh(new THREE.PlaneGeometry(w, d), ZONE_MAT.fill);
+  fill.rotation.x = -Math.PI / 2;
+  fill.position.y = 0.003;
+  fill.receiveShadow = true;
+  g.add(fill);
+  // Hazard border: alternating yellow / black dashes.
+  const t = 0.04, h = 0.005, dash = 0.1;
+  const edge = (len, along, cx, cz) => {
+    const n = Math.max(2, Math.round(len / dash));
+    for (let i = 0; i < n; i++) {
+      const c = -len / 2 + (i + 0.5) * len / n;
+      const m = along === 'x'
+        ? box(len / n, h, t, i % 2 ? ZONE_MAT.dark : ZONE_MAT.edge, cx + c, h / 2, cz)
+        : box(t, h, len / n, i % 2 ? ZONE_MAT.dark : ZONE_MAT.edge, cx, h / 2, cz + c);
+      m.castShadow = false;
+      g.add(m);
+    }
+  };
+  edge(w, 'x', 0, -d / 2 + t / 2);
+  edge(w, 'x', 0, d / 2 - t / 2);
+  edge(d - 2 * t, 'z', -w / 2 + t / 2, 0);
+  edge(d - 2 * t, 'z', w / 2 - t / 2, 0);
+  const fs = Math.min(1, (d - 0.12) / 0.26);
+  for (const s of [-1, 1]) {
+    const f = new THREE.Mesh(footprint(fs), ZONE_MAT.foot);
+    f.position.set(s * 0.09, 0.006, 0.02);
+    if (s < 0) f.scale.x = -1; // left foot
+    g.add(f);
+  }
+  const len = Math.hypot(lx, lz) || 1;
+  g.userData.operatorZone = { position: [x, 0, z], look: [lx / len, lz / len], size: [w, d] };
+  return g;
+}
+
+// Current operator zones of a (possibly edited) model, in the root's frame.
+export function operatorZonesOf(root) {
+  const out = [];
+  root.updateMatrixWorld(true);
+  const inv = root.matrixWorld.clone().invert();
+  root.traverse(o => {
+    const z = o.userData.operatorZone;
+    if (!z || o.userData.deleted) return;
+    const m = inv.clone().multiply(o.matrixWorld);
+    const p = new THREE.Vector3().setFromMatrixPosition(m);
+    const dir = new THREE.Vector3(0, 0, -1).transformDirection(m);
+    const s = new THREE.Vector3().setFromMatrixScale(m);
+    const r = v => +v.toFixed(4);
+    o.userData.operatorZone = { position: [r(p.x), r(p.y), r(p.z)], look: [r(dir.x), r(dir.z)], size: [r(z.size[0] * s.x), r(z.size[1] * s.z)] };
+    out.push(o.userData.operatorZone);
+  });
+  root.userData.operatorZones = out;
+  return out;
+}

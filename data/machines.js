@@ -13,28 +13,28 @@ export const CATEGORIES = [
 export const MACHINES = [
   // CNC Nesting
   {
-    id: 'rakete-3500a', model3d: 'index.html?m=rakete-3500a', modelNote: 'ด้านหลัง ใต้คานกระเช้า และกลไกหัว ATC วาดจากรูปโบรชัวร์มุมเดียว', cat: 'nesting', name: 'Rakete 3500A', tier: 'Built-in Startup', price: 780000,
+    id: 'rakete-3500a', model3d: 'index.html?m=rakete-3500a', cat: 'nesting', name: 'Rakete 3500A', tier: 'Built-in Startup', price: 780000,
     size: [3350, 1960, 2210], weight: 2700,
     summary: 'เครื่องเดี่ยว เปลี่ยนทูลอัตโนมัติ 12 ตัว',
     look: 'โต๊ะ 1220×2450, ตู้คอนโทรลแยก (ตู้สูงมีไฟสัญญาณ), หัว ATC ฝาส้ม, ท่อดูดฝุ่น, แม็กกาซีนทูลเรียงเส้น 12 ตัว, หมุดดันขึ้น (popup pin)',
     specs: { 'Working area': '1320×2550×200 mm', 'Spindle': 'ATC 9 kW 24,000 rpm', 'Servo': '1000 W ×4', 'Control': 'Industrial PC / Windows', 'Total power': '26 kW' },
   },
   {
-    id: 'rakete-3500ant', model3d: 'index.html?m=rakete-3500ant', modelNote: 'โต๊ะยก X-lift และสายพานขาออกวาดจากรูปเล็ก ด้านหลังเดา', cat: 'nesting', name: 'Rakete 3500Ant', tier: 'Built-in Startup', price: 1180000,
+    id: 'rakete-3500ant', model3d: 'index.html?m=rakete-3500ant', modelNote: 'ตัวเครื่องเหมือน 3500A (รูปจริง) ส่วนโต๊ะยก สายพาน และชุดดูดแผ่นวาดจากโบรชัวร์', cat: 'nesting', name: 'Rakete 3500Ant', tier: 'Built-in Startup', price: 1180000,
     size: [10335, 2260, 2150], weight: 3800,
     summary: 'Automation line: โต๊ะยกขาเข้า → CNC → สายพานขาออก',
     look: 'โต๊ะยกกรรไกร (X-lift) ขาเข้า, เครื่อง CNC, สายพานอลูมิเนียมขาออก, โต๊ะ 1220×2500',
     specs: { 'Working area': '1320×2800×200 mm', 'Spindle': '9 kW 24,000 rpm', 'Vacuum table': 'Single layer / 6 zone', 'Control': 'Syntec', 'Total power': '31 kW' },
   },
   {
-    id: 'rakete-4800ant', model3d: 'index.html?m=rakete-4800ant', modelNote: 'คานกล่อง แม็กกาซีนจาน โต๊ะยก และสายพานวาดจากรูปเล็ก ด้านหลังเดา', cat: 'nesting', name: 'Rakete 4800Ant', tier: 'Professional', price: 1580000,
+    id: 'rakete-4800ant', model3d: 'index.html?m=rakete-4800ant', modelNote: 'คานกล่อง แม็กกาซีนจานในตู้ส้ม โต๊ะยก และสายพานวาดจากโบรชัวร์ กลไกเปลี่ยนทูลแบบจานเดา', cat: 'nesting', name: 'Rakete 4800Ant', tier: 'Professional', price: 1580000,
     size: [10335, 2260, 2150], weight: 4300,
     summary: 'Automation line โต๊ะใหญ่ขึ้น ติด Auto Label ได้',
     look: 'เหมือน 3500Ant แต่โต๊ะ 1220×2800, gantry แบบกล่องปิด, แม็กกาซีนทูลแบบจาน',
     specs: { 'Working area': '1320×2900×200 mm', 'Spindle': '9 kW ISO30', 'Servo': 'Innovance 850 W ×4', 'Vacuum table': 'Double layer 210 point / 6 zone', 'Total power': '31 kW' },
   },
   {
-    id: 'rakete-5000af', model3d: 'index.html?m=rakete-5000af', modelNote: 'หัวคู่ / Auto Label วาดคร่าวๆ ยังไม่มีกลไก Auto Flip ด้านหลังเดา', cat: 'nesting', name: 'Rakete 5000AF', tier: 'Premium', price: 2150000,
+    id: 'rakete-5000af', model3d: 'index.html?m=rakete-5000af', modelNote: 'เหมือน 4800Ant + หัวที่สองและเครื่องติดฉลาก วาดจากโบรชัวร์ ยังไม่มีกลไก Auto Flip', cat: 'nesting', name: 'Rakete 5000AF', tier: 'Premium', price: 2150000,
     size: [10335, 2260, 2150], weight: 4300,
     summary: 'Fully Auto + Auto Label + Auto Flip',
     look: 'หัวคู่ ท่อดูดฝุ่น 2 ชุด, suction cup, X-lift table, สายพานขาออก',

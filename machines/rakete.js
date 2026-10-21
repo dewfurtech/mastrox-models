@@ -126,7 +126,7 @@ const ROW_HEIGHTS = [0.56, 0.36, 0.18];
 const PART_LENGTHS = [0.72, 0.6, 0.45, 0.72, 0.38, 0.3];
 const groove = std('#4a3a28', { roughness: 0.95, metalness: 0 });
 
-function nestedSheet(len, wid) {
+export function nestedSheet(len, wid) {
   const group = new THREE.Group();
   const th = 0.018;
   const board = box(len, th, wid, M.panel, 0, 0, 0);
@@ -283,7 +283,7 @@ export function createRakete(id) {
     r = router(root, cfg, (liftX[0] + outX[1]) / 2);
     scissorLift(root, liftX[0] + 0.05, liftX[1]);
     beltConveyor(root, outX[0], outX[1]);
-    root.add(controlCabinet(outX[1] - 0.6, -1.0, 0));
+    root.add(controlCabinet(outX[1] - 0.6, -1.0, -Math.PI / 2)); // screen faces along the conveyor (−x) instead of into it
   }
 
   // Panel: a sheet that comes off the lift, is cut into cabinet parts, and leaves on the conveyor.
