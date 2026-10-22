@@ -1223,30 +1223,110 @@ export function createRealRakete(id = 'rakete-3500a') {
   // ---------- the sheet being nested ----------
   // The sheet sits against the origin pins at the chute end of the table.
   const SHEET = { L: 2.44, W: 1.22, T: 0.018, x: TABLE_X - (TABLE_L - 2.52) / 2, z: 0 };
-  // Each sheet has its own canvas, so its kerf lines stay on it while it rides out on the conveyor.
+  const KERF = 0.012, MARGIN = 0.015;   // cutter diameter and the nesting margin from the sheet edge
+  // The sheet is real material that the cutter removes. It is built from solid pieces: one box per nested
+  // part, boxes for the waste around them, and thin "kerf" boxes filling the 12 mm bands the cutter will run
+  // through. As the tool sweeps along a cut the kerf box behind it is shortened and finally hidden, so the
+  // groove is a true slot: wood walls on both sides and the green spoil board visible at the bottom.
   const sheets = new THREE.Group(); sheets.name = 'Sheets'; machine.add(sheets);
-  function makeSheet(name) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 2048; canvas.height = 1024;
-    const ctx = canvas.getContext('2d');
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = MAX_ANISO;
-    const group = new THREE.Group(); group.name = name; sheets.add(group);
-    box(SHEET.L, SHEET.T, SHEET.W, M.mdfEdge, 0, SHEET.T / 2 - 0.0005, 0, group);
-    const top = new THREE.Mesh(new THREE.PlaneGeometry(SHEET.L, SHEET.W), mat('mdf_top_' + name, { map: tex, roughness: 0.85, metalness: 0 }));
-    top.rotation.x = -Math.PI / 2;
-    at(top, 0, SHEET.T + 0.0003, 0, group);
-    const sh = {
-      group, canvas, ctx, tex,
-      paint() {
-        const w = canvas.width, h = canvas.height;
-        ctx.fillStyle = '#d4c3a0'; ctx.fillRect(0, 0, w, h);
-        for (let i = 0; i < 9000; i++) {
-          const v = 150 + Math.random() * 60;
-          ctx.fillStyle = `rgba(${v},${v * 0.86},${v * 0.66},0.18)`;
-          ctx.fillRect(Math.random() * w, Math.random() * h, 2 + Math.random() * 3, 1 + Math.random() * 2);
+  const woodTex = canvasTex(2048, 1024, (c, w, h) => {
+    c.fillStyle = '#d4c3a0'; c.fillRect(0, 0, w, h);
+    for (let i = 0; i < 9000; i++) {
+      const v = 150 + Math.random() * 60;
+      c.fillStyle = `rgba(${v},${v * 0.86},${v * 0.66},0.18)`;
+      c.fillRect(Math.random() * w, Math.random() * h, 2 + Math.random() * 3, 1 + Math.random() * 2);
+    }
+  });
+  const mdfTop = mat('mdf_top', { map: woodTex, roughness: 0.85, metalness: 0 });
+  const PARTS = layoutParts();
+  // Split the sheet on a grid through every part edge and kerf band; classify each cell as part, kerf or waste.
+  function sheetPieces() {
+    const xs = new Set([-SHEET.L / 2, SHEET.L / 2]), zs = new Set([-SHEET.W / 2, SHEET.W / 2]);
+    const r = v => Math.round(v * 1e6) / 1e6;
+    for (const [x0, z0, x1, z1] of PARTS) {
+      [x0 - KERF, x0, x1, x1 + KERF].forEach(v => xs.add(r(v)));
+      [z0 - KERF, z0, z1, z1 + KERF].forEach(v => zs.add(r(v)));
+    }
+    const X = [...xs].sort((a, b) => a - b), Z = [...zs].sort((a, b) => a - b);
+    const inside = (x, z, [x0, z0, x1, z1], e = 0) => x > x0 - e && x < x1 + e && z > z0 - e && z < z1 + e;
+    const waste = [], kerf = [];
+    for (let j = 0; j < Z.length - 1; j++) {
+      let run = null;
+      for (let i = 0; i < X.length - 1; i++) {
+        const cx = (X[i] + X[i + 1]) / 2, cz = (Z[j] + Z[j + 1]) / 2;
+        const kind = PARTS.some(p => inside(cx, cz, p)) ? 'part' : PARTS.some(p => inside(cx, cz, p, KERF)) ? 'kerf' : 'waste';
+        if (kind === 'waste') {
+          if (run) run[2] = X[i + 1]; else { run = [X[i], Z[j], X[i + 1], Z[j + 1]]; waste.push(run); }   // merge along the row
+        } else {
+          run = null;
+          if (kind === 'kerf') kerf.push([X[i], Z[j], X[i + 1], Z[j + 1]]);
         }
-        tex.needsUpdate = true;
+      }
+    }
+    return { waste, kerf };
+  }
+  const PIECES = sheetPieces();
+  // A solid piece of the sheet: MDF edge on the sides, wood on top with the texture mapped in sheet coordinates
+  // so the grain runs continuously across the pieces.
+  // (the thin kerf fillers are all wood, one draw call each; the big pieces get 3 groups: sides / top / sides)
+  function sheetBox(x0, z0, x1, z1, group, single = false) {
+    const w = x1 - x0, d = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    const g = new THREE.BoxGeometry(w, SHEET.T, d);
+    const uv = g.attributes.uv, pos = g.attributes.position;
+    for (let i = 8; i < 12; i++) uv.setXY(i, (cx + pos.getX(i) + SHEET.L / 2) / SHEET.L, 1 - (cz + pos.getZ(i) + SHEET.W / 2) / SHEET.W);   // +y face
+    let material = mdfTop;
+    if (!single) {
+      g.clearGroups(); g.addGroup(0, 12, 0); g.addGroup(12, 6, 1); g.addGroup(18, 18, 0);   // px nx | py | ny pz nz
+      material = [M.mdfEdge, mdfTop];
+    }
+    const m = new THREE.Mesh(g, material);
+    m.position.set(cx, SHEET.T / 2 - 0.0005, cz);
+    m.castShadow = m.receiveShadow = true;
+    group.add(m);
+    return m;
+  }
+  function makeSheet(name) {
+    const group = new THREE.Group(); group.name = name; sheets.add(group);
+    PARTS.forEach((p, i) => { sheetBox(...p, group).name = 'part_' + (i + 1); });
+    PIECES.waste.forEach(p => { sheetBox(...p, group).name = 'waste'; });
+    const cells = PIECES.kerf.map(([x0, z0, x1, z1]) => {
+      const mesh = sheetBox(x0, z0, x1, z1, group, true); mesh.name = 'kerf';
+      return { mesh, x0, z0, x1, z1, cx0: x0, cz0: z0, cx1: x1, cz1: z1 };
+    });
+    const place = c => {
+      const w = c.cx1 - c.cx0, d = c.cz1 - c.cz0;
+      c.mesh.visible = w > 1e-5 && d > 1e-5;
+      if (!c.mesh.visible) return;
+      c.mesh.scale.set(w / (c.x1 - c.x0), 1, d / (c.z1 - c.z0));
+      c.mesh.position.x = (c.cx0 + c.cx1) / 2; c.mesh.position.z = (c.cz0 + c.cz1) / 2;
+    };
+    const EPS = 1e-4;
+    // Take the swept interval [lo, hi] out of the cell's remaining interval [a, b] along one axis.
+    const trim = (a, b, lo, hi) => {
+      if (lo <= a + EPS && hi >= b - EPS) return [a, a];           // all gone
+      if (lo <= a + EPS) return [Math.max(a, hi), b];              // eaten from the start
+      if (hi >= b - EPS) return [a, Math.min(b, lo)];              // eaten from the end
+      return [a, b];                                               // cut starts inside the cell (does not happen)
+    };
+    const sh = {
+      group,
+      paint() { for (const c of cells) { c.cx0 = c.x0; c.cz0 = c.z0; c.cx1 = c.x1; c.cz1 = c.z1; place(c); } },
+      // Remove the material the cutter (diameter KERF) has swept from (sx, sz) to (tx, tz), sheet-local metres.
+      cut(sx, sz, tx, tz) {
+        const o = KERF / 2;
+        if (Math.abs(tz - sz) < EPS) {          // along x, in the band around z = sz
+          const lo = Math.min(sx, tx) - o, hi = Math.max(sx, tx) + o;
+          for (const c of cells) {
+            if (c.z0 < sz - o - EPS || c.z1 > sz + o + EPS || c.cx1 - c.cx0 < 1e-5) continue;
+            [c.cx0, c.cx1] = trim(c.cx0, c.cx1, lo, hi); place(c);
+          }
+        } else if (Math.abs(tx - sx) < EPS) {   // along z
+          const lo = Math.min(sz, tz) - o, hi = Math.max(sz, tz) + o;
+          for (const c of cells) {
+            if (c.x0 < sx - o - EPS || c.x1 > sx + o + EPS || c.cz1 - c.cz0 < 1e-5) continue;
+            [c.cz0, c.cz1] = trim(c.cz0, c.cz1, lo, hi); place(c);
+          }
+        }
       },
     };
     sh.paint();
@@ -1394,7 +1474,6 @@ export function createRealRakete(id = 'rakete-3500a') {
   }
 
   // Nesting layout: cabinet parts packed row by row, the way nesting software lays them out.
-  const KERF = 0.012, MARGIN = 0.015;
   function layoutParts() {
     const parts = [], rows = [0.56, 0.38, 0.22], lens = [0.72, 0.60, 0.45, 0.38, 0.56];
     let z = -SHEET.W / 2 + MARGIN, k = 0;
@@ -1435,15 +1514,11 @@ export function createRealRakete(id = 'rakete-3500a') {
   const tool = { ...PARK };
   let running = false, step = 0, dwell = 0, finished = false, rpm = 0;
 
-  function sheetToPx(x, z) { return [(x + SHEET.L / 2) / SHEET.L * cur.canvas.width, (z + SHEET.W / 2) / SHEET.W * cur.canvas.height]; }
-  function drawKerf(ax, az, bx, bz) {
-    const [px0, py0] = sheetToPx(ax, az), [px1, py1] = sheetToPx(bx, bz);
-    const c = cur.ctx;
-    c.strokeStyle = '#3d2c1c';
-    c.lineWidth = KERF / SHEET.L * cur.canvas.width;
-    c.lineCap = 'round';
-    c.beginPath(); c.moveTo(px0, py0); c.lineTo(px1, py1); c.stroke();
-    cur.tex.needsUpdate = true;
+  // Material removal (see makeSheet): each cut move sweeps from the corner it started at to the tool.
+  let cutStep = -1, cutFrom = [0, 0];
+  function drawKerf(ax, az) {
+    if (cutStep !== step) { cutStep = step; cutFrom = [ax, az]; }
+    cur.cut(cutFrom[0], cutFrom[1], tool.x, tool.z);
   }
 
   // Drag chains run as a U: the lower run lies fixed in its tray, bends 180°, and the upper run comes
@@ -1608,7 +1683,7 @@ export function createRealRakete(id = 'rakete-3500a') {
         } else {
         const ax = tool.x, az = tool.z;
         const done = moveToward(mv, SPEED[mv.kind], dt);
-        if (mv.kind === 'cut' && sheets.visible) drawKerf(ax, az, tool.x, tool.z);
+        if (mv.kind === 'cut' && sheets.visible) drawKerf(ax, az);
         if (done) { step++; if (step >= PROGRAM.length) { finished = true; } }
         }
       }
