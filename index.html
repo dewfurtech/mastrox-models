@@ -45,7 +45,23 @@
   a.back { display: inline-block; margin-top: 14px; font-size: 13px; color: var(--text); }
   .tag { font-size: 12px; font-weight: 500; color: #111; background: rgba(255,255,255,.92); padding: 2px 8px; border-radius: 6px;
     border: 1px solid #d4d4d8; white-space: nowrap; pointer-events: none; }
-  @media (max-width: 720px) { #panel { width: auto; right: 16px; max-height: 45%; } }
+  [hidden] { display: none !important; }
+  /* Real-machine photo beside the model */
+  #photo { right: 16px; bottom: 16px; width: 360px; padding: 10px 12px 12px; }
+  #photo header { display: flex; align-items: center; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+  #photo header span { color: var(--text-2); }
+  #photo img { display: block; width: 100%; max-height: 260px; object-fit: contain; cursor: zoom-in; }
+  #photo .src { font-size: 12px; color: var(--text-2); margin: 6px 0 0; }
+  #photo-x { width: 26px; height: 26px; border-radius: 6px; border: none; background: transparent; font-size: 16px; line-height: 1; color: var(--text-2); }
+  #photo-x:hover { background: rgba(0,0,0,.06); color: var(--text); }
+  #photo-show { right: 16px; bottom: 16px; height: 34px; padding: 0 14px; font-size: 13px; color: var(--text); }
+  #zoom { position: fixed; inset: 0; background: rgba(20,22,24,.82); display: flex; align-items: center; justify-content: center; cursor: zoom-out; z-index: 10; padding: 24px; }
+  #zoom img { max-width: 100%; max-height: 100%; object-fit: contain; background: #fff; border-radius: 12px; padding: 16px; }
+  @media (max-width: 720px) {
+    #panel { width: auto; right: 16px; max-height: 45%; }
+    #photo { left: 16px; width: auto; }
+    #photo img { max-height: 22vh; }
+  }
 </style>
 <script type="importmap">
 { "imports": {
@@ -75,7 +91,15 @@
   <a class="back" href="list.html">← รายการเครื่องทั้งหมด</a>
   <a class="back" id="edit-link" href="editor.html" style="display:block;margin-top:8px">แก้ไขรุ่นนี้ใน Editor →</a>
   <a class="back" id="draw-link" href="drawing.html" style="display:block;margin-top:8px">ภาพ 2D 4 ด้านของรุ่นนี้ →</a>
+  <a class="back" href="compare.html" style="display:block;margin-top:8px">เทียบระดับโมเดล กล่อง → ก้อน → เต็ม →</a>
 </div>
+<figure id="photo" class="glass" hidden style="margin:0">
+  <header><b>ภาพเครื่องจริง</b><button id="photo-x" title="ซ่อนรูป" aria-label="ซ่อนรูป">×</button></header>
+  <img id="photo-img" alt="">
+  <p class="src" id="photo-src"></p>
+</figure>
+<button id="photo-show" class="glass" hidden>ดูภาพเครื่องจริง</button>
+<div id="zoom" hidden><img id="zoom-img" alt=""></div>
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -176,6 +200,7 @@ function load(id) {
   $('note').innerHTML = (note ? `<b><span class="dot"></span>โมเดลยังไม่สมบูรณ์</b><br>${note}` : '')
     + (edits.length ? `${note ? '<br>' : ''}<b>แก้ไขจาก Editor แล้ว ${edits.length} รายการ</b>` : '')
     + (userAnim ? `${note || edits.length ? '<br>' : ''}<b>เล่นแอนิเมชันคีย์เฟรมจาก Editor</b>` : '');
+  showPhoto(id);
   $('edit-link').href = `editor.html?m=${id}`;
   $('draw-link').href = `drawing.html?m=${id}`;
 
@@ -221,6 +246,36 @@ function load(id) {
   toggleRow('มุมกล้อง', 'ด้านหน้า', 'ด้านหลัง', true, v => setView(v ? 'a' : 'b'));
   setView('a');
 }
+
+// Real-machine photo (photos/<id>/<id>.png, from Docs\ภาพเครื่อง). Models with no photo of their own
+// borrow the closest sibling's and say so.
+const PHOTO_FALLBACK = { 'moon-10': 'moon-40', 'moon-40d': 'moon-40' };
+let photoOpen = true;
+try { photoOpen = localStorage.getItem('photoOpen') !== '0'; } catch {}
+let photoId = null;
+function showPhoto(id) {
+  const own = id, use = PHOTO_FALLBACK[id] ?? id;
+  photoId = use;
+  const img = $('photo-img');
+  img.onload = () => { if (photoId === use) setPhotoOpen(photoOpen); };
+  img.onerror = () => { if (photoId === use) { photoId = null; $('photo').hidden = $('photo-show').hidden = true; } };
+  img.src = `photos/${use}/${use}.png`;
+  img.alt = `ภาพจริง ${byId[use]?.name ?? use}`;
+  $('photo-src').textContent = use === own ? (byId[own]?.name ?? own)
+    : `ยังไม่มีรูป ${byId[own]?.name ?? own} · ใช้รูป ${byId[use]?.name ?? use} (รุ่นใกล้เคียง)`;
+}
+function setPhotoOpen(v) {
+  photoOpen = v;
+  try { localStorage.setItem('photoOpen', v ? '1' : '0'); } catch {}
+  if (!photoId) return;
+  $('photo').hidden = !v;
+  $('photo-show').hidden = v;
+}
+$('photo-x').addEventListener('click', () => setPhotoOpen(false));
+$('photo-show').addEventListener('click', () => setPhotoOpen(true));
+$('photo-img').addEventListener('click', () => { $('zoom-img').src = $('photo-img').src; $('zoom').hidden = false; });
+$('zoom').addEventListener('click', () => ($('zoom').hidden = true));
+addEventListener('keydown', e => { if (e.key === 'Escape') $('zoom').hidden = true; });
 
 // Use the model's camera direction, but back off far enough that the whole machine fits on screen
 // (the hand-set distances crop the bigger machines, especially on narrow windows).

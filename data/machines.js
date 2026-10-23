@@ -67,14 +67,14 @@ export const MACHINES = [
     specs: { 'Feed': '9 m/min', 'Edge thickness': '0.4–3 mm', 'Panel thickness': '10–50 mm', 'Total power': '12 kW' },
   },
   {
-    id: 'moon-10', model3d: 'index.html?m=moon-10', modelNote: 'โบรชัวร์เห็นแค่ฝั่งกระจก ฝั่งป้อนแผ่น หัว-ท้าย และรูปร่างแต่ละสถานีเดาจาก Booster', cat: 'edge', name: 'Moon 10', tier: 'Professional', price: 650000, priceNote: 'ราคาจาก Playbook เก่า ไม่อยู่ใน V6',
+    id: 'moon-10', model3d: 'index.html?m=moon-10', modelNote: 'ทำตามรูปจริงฝั่งกระจก ด้านหลัง (ฝั่งรางลูกกลิ้ง) และรูปร่างแต่ละสถานีเดาจาก Booster', cat: 'edge', name: 'Moon 10', tier: 'Professional', price: 650000, priceNote: 'ราคาจาก Playbook เก่า ไม่อยู่ใน V6',
     size: [4500, 1000, 1680], weight: 2000,
     summary: '9 สถานี หม้อกาวบน, ลูกกลิ้งกด 6 ลูก',
     look: 'ยาว แบ่ง 2 ท่อน, จอบนแขนยื่น, มอเตอร์ใหญ่ท้ายเครื่อง',
     specs: { 'Feed': '12–23 m/min', 'Glue pot': '180–210 °C', 'Air': '6.5 bar', 'Dust ports': '100 mm ×3' },
   },
   {
-    id: 'moon-40', model3d: 'index.html?m=moon-40', modelNote: 'โบรชัวร์เห็นแค่ฝั่งกระจก ฝั่งป้อนแผ่น หัว-ท้าย และรูปร่างแต่ละสถานีเดาจาก Booster', cat: 'edge', name: 'Moon 40', tier: 'Professional', price: 1150000,
+    id: 'moon-40', model3d: 'index.html?m=moon-40', modelNote: 'ทำตามรูปจริงฝั่งกระจก ด้านหลัง (ฝั่งรางลูกกลิ้ง) และรูปร่างแต่ละสถานีเดาจาก Booster', cat: 'edge', name: 'Moon 40', tier: 'Professional', price: 1150000,
     size: [6500, 1000, 1600], weight: 2500,
     summary: '12 สถานี Pre-milling PCD 65 + Contour + Flat scraping',
     look: 'ส่วนหน้าเปิดโล่ง ส่วนหลังฝาส้ม 3–4 บาน, ลูกกลิ้งรางป้อนด้านบน',
@@ -82,7 +82,7 @@ export const MACHINES = [
     specs: { 'Feed': '12–23 m/min', 'Edge thickness': '0.4–3 mm', 'Pre-milling': 'PCD 65 mm 18,000 rpm', 'Dust ports': '100 mm ×4' },
   },
   {
-    id: 'moon-40d', model3d: 'index.html?m=moon-40d', modelNote: 'โบรชัวร์เห็นแค่ฝั่งกระจก ฝั่งป้อนแผ่น หัว-ท้าย และรูปร่างแต่ละสถานีเดาจาก Booster', cat: 'edge', name: 'Moon 40d', tier: 'Premium', price: 1550000, priceNote: 'ราคาของ Moon 60 ใน Playbook เก่า ไม่อยู่ใน V6',
+    id: 'moon-40d', model3d: 'index.html?m=moon-40d', modelNote: 'ทำตามรูปจริงฝั่งกระจก ด้านหลัง (ฝั่งรางลูกกลิ้ง) และรูปร่างแต่ละสถานีเดาจาก Booster', cat: 'edge', name: 'Moon 40d', tier: 'Premium', price: 1550000, priceNote: 'ราคาของ Moon 60 ใน Playbook เก่า ไม่อยู่ใน V6',
     size: [8000, 1000, 1600], weight: 3000,
     summary: '14 สถานี หม้อกาวคู่ + Hot Air (Zero Line) — เดิมชื่อ Moon 60',
     look: 'ยาวที่สุดในกลุ่ม Moon',
@@ -90,7 +90,7 @@ export const MACHINES = [
     specs: { 'Feed': '12–23 m/min', 'Glue pot': '180–210 °C', 'Dust ports': '100 mm ×5' },
   },
   {
-    id: 'moon-80', model3d: 'index.html?m=moon-80', modelNote: 'ลำดับ 13 สถานีเดาเอง (โบรชัวร์ไม่ได้ระบุ) ฝั่งป้อนแผ่นและหัว-ท้ายเดาจาก Booster', cat: 'edge', name: 'Moon 80', tier: 'Premium', price: 1650000,
+    id: 'moon-80', model3d: 'index.html?m=moon-80', modelNote: 'ทำตามรูปจริงฝั่งกระจก ลำดับ 13 สถานีเดาเอง (โบรชัวร์ไม่ได้ระบุ) ด้านหลังเดา', cat: 'edge', name: 'Moon 80', tier: 'Premium', price: 1650000,
     size: [6500, 1000, 1600], weight: 3100,
     summary: 'Belt type, 4 Round Corner, 13 unit',
     look: 'โครงเดียวกับ Moon 40',
@@ -125,7 +125,7 @@ export const MACHINES = [
     specs: { 'Working size': 'แผ่นยาว 2800 mm', 'Spindle': '2.2 kW 18,000 rpm', 'Servo': '750 W ×3', 'Total power': '13.65 kW' },
   },
   {
-    id: 'nova-xs', model3d: 'index.html?m=nova-xs', modelNote: 'มีรูปเดียว ห้องหัวเจาะ โต๊ะป้อน และด้านหลังเดาเกือบทั้งหมด', cat: 'drill', name: 'Nova XS', tier: 'Premium', price: 990000,
+    id: 'nova-xs', model3d: 'index.html?m=nova-xs', modelNote: 'รูปทรงตามแบบ K-CAD (สเกลจากความสูง 2.15 ม.) รายละเอียดตามรูปจริง ด้านหลัง ภายในห้องหัวเจาะ และกลไกขับเดาเอง', cat: 'drill', name: 'Nova XS', tier: 'Premium', price: 990000,
     priceNote: '+ dual top 1,150,000 · + ATC 1,350,000',
     size: [5350, 2800, 2150], weight: null,
     summary: 'เจาะ 6 ด้าน หัวบนคู่',

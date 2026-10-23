@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { M, box, cyl, decal, std, button } from './lib.js';
+import { M, box, cyl, decal, logo, std, button } from './lib.js';
 
 // Mastrox Cold Presso, 60 t hydraulic cold press.
 // Brochure: 2950 × 1270 × 2280 mm, 2000 kg, table 2500 × 1250 mm, max opening 1000 mm, 4 cylinders.
@@ -51,11 +51,14 @@ export function createColdPress() {
     root.add(box(0.16, 0.9, 0.2, std('#3f454d'), s * (xc - 0.1), 0.85, 0.05)); // inner web
   }
   root.add(box(L, BEAM_Y1 - BEAM_Y0, 0.5, steel, 0, (BEAM_Y0 + BEAM_Y1) / 2, -0.05));
-  const name = decal('Presso', { w: 0.95, color: '#f07a22', font: '400 130px "IBM Plex Sans Thai", sans-serif' });
-  name.position.set(0.55, (BEAM_Y0 + BEAM_Y1) / 2, 0.201);
+  // Beam lettering as in the product photo: big light "mastrox" from the left end, small orange
+  // "Presso" at the right end, both in the upper part of the beam.
+  const textY = BEAM_Y1 - (BEAM_Y1 - BEAM_Y0) * 0.3;
+  const name = decal('Presso', { w: 0.46, color: '#f07a22', font: '400 130px Comfortaa, "IBM Plex Sans Thai", sans-serif' });
+  name.position.set(L / 2 - 0.17 - 0.23, textY, 0.201);
   root.add(name);
-  const badge = decal('mastrox', { w: 0.32, color: '#1d1f22', bg: '#f07a22' });
-  badge.position.set(-0.85, (BEAM_Y0 + BEAM_Y1) / 2 + 0.02, 0.201);
+  const badge = logo(0.82, '#e4e4e2');
+  badge.position.set(-L / 2 + 0.16 + 0.41, textY, 0.201);
   root.add(badge);
 
   // Cylinder barrels sticking out of the beam (two visible at the back), rods down to the platen.

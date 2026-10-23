@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { M, box, cyl, logo, button, std } from './lib.js';
+import { M, box, cyl, logo, LOGO_ASPECT_BOLD, button, std } from './lib.js';
 
 // Mastrox Aurora OpenShell, single-tray vacuum membrane press with a lift-up heated lid.
 // Brochure: 2603 × 1372 × 1308 mm, 1200 kg, table 2550 × 1300 × 50 mm, 18.7 kW heating.
@@ -30,9 +30,11 @@ export function createAuroraOpen() {
   root.add(box(0.012, 0.045, 0.004, M.red, -0.99, 0.61, zDoor + 0.037));
   const row = [[M.red, 0.02], [M.white, 0.012], [M.green, 0.012], [M.white, 0.012], [M.white, 0.012], [M.white, 0.012], [M.white, 0.012], [M.frame, 0.012]];
   row.forEach(([m, r], i) => root.add(button(m, -0.3 + i * 0.075, 0.72, zDoor + 0.01, r)));
-  const badge = logo(0.55, '#f2f2f2');
-  badge.position.set(-0.85, 0.3, zDoor + 0.004);
-  badge.rotation.z = 0.25;
+  // Photo: level (the slant is only the camera angle), thick letters, across ~3/4 of the left door
+  // from its left edge, sitting just above the door's bottom edge.
+  const lw = 0.65;
+  const badge = logo(lw, '#f2f2f2', undefined, { bold: true });
+  badge.position.set(-1.2 - lw * 0.05 / 1.1 + lw / 2, 0.19 + lw * LOGO_ASPECT_BOLD / 2, zDoor + 0.004);
   root.add(badge);
   root.add(box(0.12, 0.08, 0.004, M.white, 1.05, 0.72, zDoor + 0.002)); // rating plate
   root.add(box(0.04, 0.1, 0.02, M.navy, -0.48, 0.74, zDoor + 0.01)); // key switch

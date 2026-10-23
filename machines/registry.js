@@ -1,6 +1,7 @@
 import { createBooster } from './booster.js';
 import { createMoon } from './moon.js';
-import { createNova, createNovaXS } from './nova.js';
+import { createNova } from './nova.js';
+import { createNovaXS } from './nova-xs.js';
 import { createRealRakete } from './rakete-real.js';
 import { createGlueSpreader } from './glue-spreader.js';
 import { createColdPress } from './cold-press.js';
@@ -21,14 +22,14 @@ const ZONES = {
   'booster-e6': { x: -1.49, z: -0.8, look: [0.48, 0.88] },
   'booster-e7': { x: -1.65, z: -0.8, look: [0.48, 0.88] },
   'booster-e10': { x: -1.97, z: -0.8, look: [0.48, 0.88] },
-  'moon-10': { x: -1.96, z: -1.03, look: [0, 1] },
-  'moon-40': { x: -2.96, z: -1.03, look: [0, 1] },
-  'moon-40d': { x: -3.71, z: -1.03, look: [0, 1] },
-  'moon-80': { x: -2.96, z: -1.03, look: [0, 1] },
+  'moon-10': { x: -2.6, z: 1.1, look: [0, -1] }, // Moon: in front of the screen, left of the coil table
+  'moon-40': { x: -3.6, z: 1.1, look: [0, -1] },
+  'moon-40d': { x: -4.35, z: 1.1, look: [0, -1] },
+  'moon-80': { x: -3.6, z: 1.1, look: [0, -1] },
   'nova-x2': { x: -0.55, z: 1.01, look: [0, -1] },
   'nova-x4': { x: -0.35, z: 1.16, look: [0, -1] },
   'nova-x6': { x: -0.35, z: 1.01, look: [0, -1] },
-  'nova-xs': { x: -0.75, z: 1.14, look: [0.34, -0.94] }, // beside the outfeed table, facing the swing-arm screen
+  'nova-xs': { x: -0.15, z: 0.75, look: [-0.71, -0.71] }, // right of the feed table, facing the console
   'nebula': { x: 1.25, z: 0.4, look: [-1, 0] },
   'aurora-open': { x: -0.05, z: 1.08, look: [0, -1] },
   'aurora-slide': { x: 0, z: 1.47, look: [0, -1] }, // the screen rides on the shell, so mid-front between the trays

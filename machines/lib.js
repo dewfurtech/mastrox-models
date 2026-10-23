@@ -82,7 +82,94 @@ export function decal(text, { w, color = '#ffffff', accent, bg, font = '400 120p
   return new THREE.Mesh(new THREE.PlaneGeometry(w, w * c.height / c.width), new THREE.MeshBasicMaterial({ map: tex, transparent: !bg }));
 }
 
-export const logo = (w, color = '#f2f2f2') => decal('mastrox', { w, accent: ['mas', 'trox'], color, font: '400 130px "IBM Plex Sans Thai", sans-serif' });
+// ---------- The mastrox logo, from the real artwork (Docs\Logo) ----------
+// Two cuts of the same letters, each keyed off its background into a white mask once; every texture
+// then recolours the "mas" and "trox" parts. Textures are made at once and painted when the image
+// arrives, so models can be built synchronously.
+//   thin: assets/mastrox-logo-thin.png  = Logo_GrayGround.png (white + orange on dark grey)
+//   bold: assets/mastrox-logo-badge.png = mastroxR1.png (dark + white on orange) — the weight on the
+//         Nova X beam in the photos
+const ARTS = {
+  thin: { file: 'mastrox-logo-thin.png', x: 137, y: 61, w: 1393, h: 235, split: 0.5255,
+    alpha: (r, g, b) => (Math.max(r, g, b) - 40) / 190 },               // bright letters on #262626
+  bold: { file: 'mastrox-logo-badge.png', x: 218, y: 203, w: 2250, h: 382, split: 0.523,
+    alpha: (r, g, b) => (Math.abs(r - 253) + Math.abs(g - 79) + b - 40) / 220 }, // anything not orange
+};
+const ART_PAD = 0.05; // clear space each side, as a share of the width
+const aspectOf = art => art.h / (art.w * (1 + 2 * ART_PAD));
+export const LOGO_ASPECT = aspectOf(ARTS.thin), LOGO_ASPECT_BOLD = aspectOf(ARTS.bold);
+// Resolves once both cuts are loaded and logo textures are painted (for snapshots taken straight away).
+const artReady = [];
+export let logosReady;
+for (const art of Object.values(ARTS)) {
+  art.mask = null; art.waiting = [];
+  artReady.push(new Promise(res => art.waiting.push(res)));
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement('canvas');
+    c.width = art.w; c.height = art.h;
+    const x = c.getContext('2d');
+    x.drawImage(img, art.x, art.y, art.w, art.h, 0, 0, art.w, art.h);
+    const id = x.getImageData(0, 0, art.w, art.h), d = id.data;
+    for (let k = 0; k < d.length; k += 4) {
+      const a = Math.min(1, Math.max(0, art.alpha(d[k], d[k + 1], d[k + 2])));
+      d[k] = d[k + 1] = d[k + 2] = 255; d[k + 3] = Math.round(a * 255);
+    }
+    x.putImageData(id, 0, 0);
+    art.mask = c;
+    art.waiting.splice(0).forEach(f => f());
+  };
+  img.onerror = () => art.waiting.splice(0).forEach(f => f());
+  img.src = new URL('../assets/' + art.file, import.meta.url).href;
+}
+logosReady = Promise.all(artReady);
+
+const logoCache = new Map();
+// Texture of the logo with "mas" and "trox" in the given colours (cached per cut and colour pair).
+export function logoTexture({ mas = '#f2f2f2', trox = '#f26022', bold = false } = {}) {
+  const art = bold ? ARTS.bold : ARTS.thin, key = (bold ? 'b' : 't') + mas + trox;
+  if (logoCache.has(key)) return logoCache.get(key);
+  const W = 1536, artW = Math.round(W / (1 + 2 * ART_PAD)), H = Math.round(artW * art.h / art.w), pad = (W - artW) / 2;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  const paint = () => {
+    const x = c.getContext('2d');
+    x.clearRect(0, 0, W, H);
+    x.drawImage(art.mask, pad, 0, artW, H);
+    x.globalCompositeOperation = 'source-atop';
+    x.fillStyle = mas; x.fillRect(0, 0, pad + artW * art.split, H);
+    x.fillStyle = trox; x.fillRect(pad + artW * art.split, 0, W, H);
+    x.globalCompositeOperation = 'source-over';
+    tex.needsUpdate = true;
+  };
+  if (art.mask) paint(); else art.waiting.push(paint);
+  tex.userData.mastroxLogo = { mas, trox, bold };   // blocky.js finds the logos by this
+  logoCache.set(key, tex);
+  return tex;
+}
+
+// The logo as a flat plane `w` meters wide; `color` is the "mas" colour ("trox" stays brand orange).
+// `bold` picks the heavy cut (Nova X beam).
+export const logo = (w, color = '#f2f2f2', trox, { bold = false } = {}) => new THREE.Mesh(
+  new THREE.PlaneGeometry(w, w * (bold ? LOGO_ASPECT_BOLD : LOGO_ASPECT)),
+  new THREE.MeshBasicMaterial({ map: logoTexture({ mas: color, trox, bold }), transparent: true, depthWrite: false }));
+
+// The bold logo on its orange block (Docs\Logo\mastroxR1.png): dark "mas", white "trox". For badges.
+export const BADGE_ASPECT = 788 / 2686;
+let badgeTex = null;
+export function badgeTexture() {
+  if (!badgeTex) {
+    badgeTex = new THREE.TextureLoader().load(new URL('../assets/mastrox-logo-badge.png', import.meta.url).href);
+    badgeTex.colorSpace = THREE.SRGBColorSpace;
+    badgeTex.anisotropy = 8;
+    badgeTex.userData.mastroxLogo = { badge: true };
+  }
+  return badgeTex;
+}
+export const logoBadge = w => new THREE.Mesh(new THREE.PlaneGeometry(w, w * BADGE_ASPECT), new THREE.MeshBasicMaterial({ map: badgeTexture() }));
 
 export function warning(x, y, z, rotY = 0, s = 1) {
   const shape = new THREE.Shape([new THREE.Vector2(-0.025 * s, 0), new THREE.Vector2(0.025 * s, 0), new THREE.Vector2(0, 0.044 * s)]);

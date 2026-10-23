@@ -21,12 +21,14 @@ export function createNebula() {
   // Main cabinet with the orange name plate, control strip and e-stop.
   root.add(box(1.5, TABLE_Y - 0.025, 0.85, body, 0.1, (TABLE_Y - 0.025) / 2, 0.2)); // up to the cast table's underside
   const plate = decal('Nebula', { w: 0.32, color: '#1d1f22', bg: '#f07a22' });
-  plate.rotation.y = Math.PI / 2;
-  plate.position.set(0.851, TABLE_Y - 0.2, 0.4);
+  // Photo: name plate in the top corner and a big level logo across the lower half of the long
+  // face under the sliding table (−z), toward the far end.
+  plate.rotation.y = Math.PI;
+  plate.position.set(0.85 - 0.04 - 0.16, TABLE_Y - 0.28, -0.226);
   root.add(plate);
-  const badge = logo(0.7, '#e9e9e9');
-  badge.rotation.set(0, Math.PI / 2, -0.35);
-  badge.position.set(0.852, 0.4, 0.15);
+  const badge = logo(0.84, '#e9e9e9');
+  badge.rotation.set(0, Math.PI, 0);
+  badge.position.set(-0.11, 0.32, -0.227);
   root.add(badge);
   // Control strip on the cabinet's +x face: pilot lamps, start / stop, tilt read-out.
   const controls = new THREE.Group();

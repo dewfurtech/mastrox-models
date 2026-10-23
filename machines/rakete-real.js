@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { logoTexture, LOGO_ASPECT, badgeTexture, BADGE_ASPECT } from './lib.js';
 
 // Mastrox Rakete CNC nesting routers, detailed models. One builder for the whole family:
 //   3500A    stand-alone, open gantry, linear 12-tool rack (factory photos, measured hood)
@@ -137,19 +138,9 @@ export function createRealRakete(id = 'rakete-3500a') {
   hoseBump.wrapS = hoseBump.wrapT = THREE.RepeatWrapping;
 
   // Logo and label textures.
-  function logoTex({ mas = '#1d1f22', trox = '#f07a22', weight = 300 } = {}) {
-    const fs = 220;
-    const font = `${weight} ${fs}px Comfortaa, "Varela Round", sans-serif`;
-    const m = document.createElement('canvas').getContext('2d');
-    m.font = font;
-    const w1 = m.measureText('mas').width, w2 = m.measureText('trox').width;
-    const W = Math.ceil(w1 + w2 + 20), H = Math.ceil(fs * 1.12);
-    const tex = canvasTex(W, H, (c) => {
-      c.font = font; c.textBaseline = 'alphabetic';
-      c.fillStyle = mas; c.fillText('mas', 10, fs * 0.86);
-      c.fillStyle = trox; c.fillText('trox', 10 + w1, fs * 0.86);
-    });
-    return { tex, aspect: W / H };
+  // The real logo artwork (lib.js, from Docs\Logo): "mas" in the given colour, "trox" brand orange.
+  function logoTex({ mas = '#1d1f22', trox } = {}) {
+    return { tex: logoTexture({ mas, trox }), aspect: 1 / LOGO_ASPECT };
   }
   function labelTex(text, { bg = '#f07a22', fg = '#1d1f22', font = '400 120px Comfortaa, sans-serif', padX = 30, h = 170, small, smallFont } = {}) {
     const m = document.createElement('canvas').getContext('2d');
@@ -1049,7 +1040,7 @@ export function createRealRakete(id = 'rakete-3500a') {
     for (const z of [GBOX.z0 + 0.35, cz + 0.15]) box(0.002, h - 0.1, 0.004, M.bodyDark, GBOX.x1 + 0.001, cy - 0.03, z, cover);   // panel seams
     const name = labelTex(V.tag, { bg: null, fg: '#f07a22', font: '400 120px Comfortaa, sans-serif', small: 'Rakete', smallFont: '400 54px Comfortaa, sans-serif', h: 150, padX: 20 });
     decal(name, 0.55, GBOX.x1 + 0.003, cy - 0.04, GBOX.z1 - 0.42, cover, { rotY: Math.PI / 2, name: 'tag_gantry' });
-    const badge = labelTex('mastrox', { bg: '#f07a22', fg: '#1d1f22', font: '300 120px Comfortaa, sans-serif', h: 160, padX: 26 });
+    const badge = { tex: badgeTexture(), aspect: 1 / BADGE_ASPECT }; // bold logo on orange (Docs\Logo\mastroxR1.png)
     decal(badge, 0.24, GBOX.x1 + 0.003, GBOX.y1 - 0.12, GBOX.z0 + 0.2, cover, { rotY: Math.PI / 2, name: 'logo_gantry', transparent: false });
     decal(logoTex(), 0.6, cx, cy, GBOX.z0 - 0.003, cover, { rotY: Math.PI, name: 'logo_gantry_end' });
   }

@@ -268,10 +268,11 @@ export function createBooster(id) {
     // Comfortaa is loaded by rakete-real.js, which registry.js imports first.
     const [da, db] = doors[doors.length - 1];             // the door at X1: left-hand from the amber side
     const lw = Math.min(0.95, (db - da) * 0.72);
-    const back = decal('mastrox', { w: lw, accent: ['mas', 'trox'], color: '#e4e4e2', font: '300 130px Comfortaa, "IBM Plex Sans Thai", sans-serif' });
-    back.geometry.computeBoundingBox();
-    const lh = back.geometry.boundingBox.max.y - back.geometry.boundingBox.min.y;
-    back.position.set(db - (db - da) * 0.47, DY0 + 0.03 + lh / 2, zDoor - 0.01);
+    const back = logo(lw, '#e4e4e2');
+    // Product photos (Docs\ภาพเครื่อง): the word starts right at the door's outer edge and sits in the
+    // lower third, its middle ~69% down the door (e7: ~60%).
+    const down = cfg.name === 'Booster e7' ? 0.6 : 0.69;
+    back.position.set(db - 0.035 - lw / 2, DY1 - DH * down, zDoor - 0.01);
     back.rotation.y = Math.PI;
     root.add(back);
     const strip = decal(cfg.name, { w: 0.36, color: '#1d1f22', bg: '#f07a22', font: '400 110px "IBM Plex Sans Thai", sans-serif' });

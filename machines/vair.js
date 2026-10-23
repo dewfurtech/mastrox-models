@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { M, box, cyl, tube, button, std } from './lib.js';
+import { M, box, cyl, decal, tube, button, std } from './lib.js';
 
 // VAir inverter screw compressor sets, as sold in the Mastrox lineup:
 // compressor + 600 L receiver tank + refrigerated air dryer + 2 line filters.
@@ -50,7 +50,6 @@ export function createVAir(id) {
   const cfg = VAIRS[id];
   const [cl, cw, ch] = cfg.size;
   const V_W = cl * 0.475, V_H = V_W * 0.79; // fills the right door of this compressor
-  const grow = cl / 0.8; // the dryer grows with the compressor; sizes below are for the 10HP set
   const root = new THREE.Group();
   root.name = cfg.name;
 
@@ -73,10 +72,24 @@ export function createVAir(id) {
   root.add(box(0.004, ch - base - 0.04, 0.004, M.gearGreen, cl * 0.02, base + (ch - base) / 2, zf + 0.001)); // door seam
   root.add(box(0.1, 0.13, 0.002, M.white, cl * 0.3, ch * 0.8, zf + 0.003)); // rating plate, top of the right door
   root.add(cyl(0.018, 0.2, M.steel, -cl / 2 - 0.08, ch * 0.78, -cw * 0.2, 'x', 12)); // air outlet
+  {
+    // photos: "VAIR" under the control window (20HP) or low on the left door (10HP)
+    const mark = decal('VAIR', { w: 0.13, color: '#ffffff', font: '700 120px "IBM Plex Sans Thai", sans-serif' });
+    mark.position.set(id === 'vair-20' ? -cl * 0.24 : -cl * 0.36, id === 'vair-20' ? ch * 0.3 : ch * 0.36, zf + 0.004);
+    root.add(mark);
+  }
+  if (id === 'vair-20') {
+    // 20HP photo: "Inverter VSD" on the door above the V
+    const inv = decal('Inverter VSD', { w: 0.16, color: '#c9d97a', font: 'italic 400 100px "IBM Plex Sans Thai", sans-serif' });
+    inv.position.set(cl * 0.33, base + 0.02 + V_H + 0.03, zf + 0.004);
+    root.add(inv);
+  }
 
-  // 600 L receiver tank behind and to the right.
-  // The tank stands on its own behind the compressor and dryer, with about 0.6 m of walkway between.
-  const tr = 0.325, tankH = 2.0, tx = cl / 2 + 0.55, tz = -cw / 2 - 0.6 - tr;
+  // 600 L receiver tank. Both sets stand in one row facing front, as in their photos (measured at
+  // ~300 px/m): 20HP — dryer, tank, compressor from left to right; 10HP — the mirror: compressor,
+  // tank, dryer. The tank stands on lime legs in the middle.
+  const row = true, left = id === 'vair-20'; // left: the tank and dryer are on the compressor's left
+  const tr = 0.325, tankH = 2.0, tx = left ? -1.18 : cl / 2 + 0.68, tz = left ? -0.01 : -0.08;
   const shell = 1.55, legs = 0.12;
   const yc = legs + 0.2 + shell / 2;
   root.add(cyl(tr, shell, M.lime, tx, yc, tz, 'y', 40));
@@ -88,9 +101,20 @@ export function createVAir(id) {
     cap.castShadow = true;
     root.add(cap);
   }
-  for (let i = 0; i < 3; i++) {
-    const a = i * Math.PI * 2 / 3 + 0.3;
-    root.add(box(0.05, legs + 0.25, 0.05, M.frame, tx + Math.cos(a) * tr * 0.75, (legs + 0.25) / 2, tz + Math.sin(a) * tr * 0.75));
+  if (row) {
+    // four splayed lime legs with foot pads (photo)
+    for (let i = 0; i < 4; i++) {
+      const a = i * Math.PI / 2 + Math.PI / 4, lx = tx + Math.cos(a) * tr * 0.62, lz = tz + Math.sin(a) * tr * 0.62;
+      const leg = box(0.06, legs + 0.27, 0.06, M.lime, lx, (legs + 0.27) / 2, lz);
+      leg.rotation.set(Math.sin(a) * 0.08, 0, -Math.cos(a) * 0.08);
+      root.add(leg);
+      root.add(box(0.1, 0.012, 0.1, M.lime, lx + Math.cos(a) * 0.015, 0.006, lz + Math.sin(a) * 0.015));
+    }
+  } else {
+    for (let i = 0; i < 3; i++) {
+      const a = i * Math.PI * 2 / 3 + 0.3;
+      root.add(box(0.05, legs + 0.25, 0.05, M.frame, tx + Math.cos(a) * tr * 0.75, (legs + 0.25) / 2, tz + Math.sin(a) * tr * 0.75));
+    }
   }
   const v2 = chevron(V_W, V_H);
   v2.position.set(tx - 0.04, yc + 0.4, tz + tr + 0.003);
@@ -102,7 +126,9 @@ export function createVAir(id) {
 
   // Refrigerated dryer in front of the tank: lime sides with slot vents, a black front panel with a
   // window over the gauge and controls and the white V below it, and a dark lid with two pipe stubs.
-  const dl = 0.42 * grow, dw = 0.62 * grow, dh = 0.7 * grow, dx = tx + 0.15, dz = zf - dw / 2 + 0.05;
+  // 20HP photo: about 0.53 wide × 0.63 tall, on the left of the tank, its front level with the others.
+  const dl = left ? 0.53 : 0.49, dw = left ? 0.7 : 0.62, dh = left ? 0.63 : 0.57;
+  const dx = left ? tx - tr - dl / 2 - 0.02 : tx + tr + 0.44 + dl / 2, dz = zf + 0.04 - dw / 2;
   const dfz = dz + dw / 2; // front face
   root.add(box(dl, dh - 0.015, dw - 0.01, M.lime, dx, (dh - 0.015) / 2, dz - 0.005));
   root.add(box(dl + 0.004, dh - 0.015, 0.012, M.frame, dx, (dh - 0.015) / 2, dfz - 0.004)); // black front panel
@@ -119,7 +145,7 @@ export function createVAir(id) {
   // Down at the bottom of the black front panel.
   const v3H = V_H;
   const v3 = chevron(V_W, V_H);
-  v3.position.set(dx + dl / 2 - 0.004 - V_W / 2, v3H / 2 + 0.005, dfz + 0.004); // flush right and bottom
+  v3.position.set(left ? dx - dl / 2 + 0.004 + V_W / 2 : dx + dl / 2 - 0.004 - V_W / 2, v3H / 2 + 0.005, dfz + 0.004); // flush bottom; right (10HP) or left (20HP photo)
   root.add(v3);
   // Slot vents on the left side, in staggered columns.
   const slotGeo = new THREE.CapsuleGeometry(0.005, 0.035, 4, 8);
@@ -138,17 +164,71 @@ export function createVAir(id) {
     root.add(cyl(0.005, 0.004, M.chrome, dx + z * (dl / 2 - 0.02), y, dfz + 0.006, 'z', 8)); // corner rivets
   }
 
-  // Two line filters on a wall bracket by the tank, and the piping.
-  const fx = tx + tr + 0.2;
-  for (let i = 0; i < 2; i++) {
-    root.add(cyl(0.045, 0.3, M.lime, fx, 1.05, tz + 0.15 + i * 0.22, 'y', 20));
-    root.add(cyl(0.05, 0.06, M.frame, fx, 1.23, tz + 0.15 + i * 0.22, 'y', 20));
-  }
-  root.add(box(0.03, 1.3, 0.03, M.frame, fx + 0.07, 0.65, tz + 0.26)); // bracket post
   const pipe = M.steel;
-  root.add(tube([[-cl / 2 - 0.18, ch * 0.78, -cw * 0.2], [-cl / 2 - 0.2, ch + 0.25, -cw * 0.4], [tx - tr - 0.05, ch + 0.3, tz], [tx - tr + 0.02, yc - 0.3, tz]], 0.018, pipe));
-  root.add(tube([[tx, yc + shell / 2 + 0.1, tz], [tx + 0.1, yc + shell / 2 + 0.15, tz + 0.1], [fx, 1.35, tz + 0.15], [fx, 1.26, tz + 0.15]], 0.018, pipe));
-  root.add(tube([[fx, 1.26, tz + 0.37], [fx, 1.35, tz + 0.37], [dx - dl * 0.15, dh + 0.14, dz - dw * 0.12], [dx - dl * 0.15, dh + 0.03, dz - dw * 0.12]], 0.018, pipe));
+  let fx, filterLabel;
+  if (left) {
+    // 20HP photo: two filters stand on the dryer's top at its left, piped across into the tank's
+    // side; a third filter hangs off the tank's upper left with a black hose looping down to the
+    // dryer; a black hose loops from the tank's lower right into the compressor.
+    const hose = std('#141414', { roughness: 0.55 });
+    const fz = dz - 0.1, fy0 = dh + 0.02;
+    fx = dx - dl / 2 + 0.07;
+    for (let i = 0; i < 2; i++) {
+      const x = fx + i * 0.11;
+      root.add(cyl(0.045, 0.24, M.lime, x, fy0 + 0.12, fz, 'y', 20)); // filter bowl
+      root.add(cyl(0.05, 0.05, M.lime, x, fy0 + 0.265, fz, 'y', 20)); // head
+      root.add(cyl(0.012, 0.04, M.brass, x, fy0 - 0.01, fz, 'y', 10)); // drain
+    }
+    root.add(cyl(0.018, 0.12, M.brass, fx - 0.1, fy0 + 0.265, fz, 'x', 10)); // inlet fitting
+    root.add(tube([[fx + 0.11, fy0 + 0.265, fz], [fx + 0.3, fy0 + 0.27, fz], [tx - tr - 0.05, fy0 + 0.25, fz + 0.04], [tx - tr + 0.01, fy0 + 0.25, tz + 0.15]], 0.025, pipe));
+    // filter on the tank's upper left, black hose down to the dryer
+    const ux = tx - tr - 0.12, uy = 1.48, uz = tz + 0.12;
+    root.add(cyl(0.04, 0.22, std('#d8e04a', { roughness: 0.5 }), ux, uy, uz, 'y', 20));
+    root.add(cyl(0.046, 0.05, M.lime, ux, uy + 0.13, uz, 'y', 20));
+    root.add(cyl(0.012, 0.12, M.steel, ux + 0.07, uy + 0.13, uz, 'x', 10)); // nipple into the tank
+    root.add(tube([[ux - 0.04, uy + 0.13, uz], [ux - 0.35, uy + 0.12, uz + 0.05], [dx - dl / 2 - 0.18, 1.0, dz + 0.1], [dx + dl / 2 - 0.08, dh + 0.25, dz + 0.05], [dx + dl / 2 - 0.08, dh + 0.04, dz - 0.05]], 0.016, hose, 60));
+    // tank lower right to the compressor's inlet valve, sagging in a loop
+    root.add(cyl(0.012, 0.08, M.brass, tx + tr + 0.03, 0.63, tz + 0.1, 'x', 10));
+    root.add(cyl(0.015, 0.14, M.brass, -cl / 2 - 0.05, ch * 0.88, zf - 0.12, 'x', 10)); // inlet valve on the compressor
+    root.add(tube([[tx + tr + 0.07, 0.63, tz + 0.1], [tx + tr + 0.2, 0.55, tz + 0.2], [-cl / 2 - 0.25, 0.25, zf], [-cl / 2 - 0.3, 0.6, zf - 0.05], [-cl / 2 - 0.12, ch * 0.88, zf - 0.12]], 0.016, hose, 60));
+    // pressure gauge on the tank front, inside the V
+    root.add(cyl(0.05, 0.02, M.chrome, tx - 0.06, yc + 0.42, tz + tr + 0.01, 'z', 28));
+    root.add(cyl(0.042, 0.022, std('#eef2f6', { roughness: 0.3 }), tx - 0.06, yc + 0.42, tz + tr + 0.012, 'z', 28));
+    // three spare-part boxes on the compressor's top (photo)
+    [[-0.12, 0.19, 0.16], [0.03, 0.24, 0.2], [0.18, 0.2, 0.16]].forEach(([x, h, w]) => {
+      root.add(box(w * 0.8, h, w * 0.6, M.lime, cl * 0.1 + x, ch + h / 2, -0.02));
+      root.add(box(w * 0.7, h * 0.45, 0.002, M.white, cl * 0.1 + x, ch + h * 0.45, -0.02 + w * 0.3 + 0.002));
+    });
+    filterLabel = { text: 'Filter ×3', at: [fx + 0.05, dh + 0.45, fz] };
+  } else {
+    // 10HP photo: a filter on the tank's upper right with two black hoses down to the dryer (one into
+    // its left side low, one over into its top); two more filters hang from a steel pipe that runs
+    // into the dryer's top; a black hose sags from the compressor's right side into the tank.
+    const hose = std('#141414', { roughness: 0.55 });
+    const ux = tx + tr + 0.12, uy = 1.42, uz = tz + 0.12;
+    root.add(cyl(0.04, 0.22, std('#d8e04a', { roughness: 0.5 }), ux, uy, uz, 'y', 20));
+    root.add(cyl(0.046, 0.05, M.lime, ux, uy + 0.13, uz, 'y', 20));
+    root.add(cyl(0.012, 0.12, M.steel, ux - 0.07, uy + 0.13, uz, 'x', 10)); // nipple into the tank
+    root.add(tube([[ux, uy - 0.12, uz], [ux, 0.6, uz + 0.05], [ux + 0.08, 0.28, dz + 0.1], [dx - dl / 2 - 0.01, 0.25, dz + 0.1]], 0.016, hose, 60));
+    root.add(tube([[ux + 0.03, uy + 0.13, uz], [ux + 0.45, uy + 0.05, uz + 0.05], [dx + 0.08, dh + 0.5, dz], [dx + 0.08, dh + 0.01, dz - 0.05]], 0.016, hose, 60));
+    const py = dh + 0.06, pz = dz - 0.08;
+    fx = tx + tr + 0.3;
+    root.add(cyl(0.015, 0.1, M.brass, fx - 0.1, py, pz, 'x', 10)); // inlet fitting
+    root.add(tube([[fx - 0.05, py, pz], [dx - 0.05, py, pz], [dx + 0.02, py - 0.01, pz], [dx + 0.02, dh + 0.005, pz]], 0.02, pipe, 24));
+    for (let i = 0; i < 2; i++) {
+      const x = fx + i * 0.1;
+      root.add(cyl(0.045, 0.05, M.lime, x, py - 0.02, pz, 'y', 20)); // head on the pipe
+      root.add(cyl(0.04, 0.22, M.lime, x, py - 0.155, pz, 'y', 20)); // bowl hanging below
+      root.add(cyl(0.01, 0.04, M.brass, x, py - 0.285, pz, 'y', 10)); // drain
+    }
+    // compressor right side to the tank's lower left, sagging in a loop
+    root.add(cyl(0.015, 0.12, M.brass, cl / 2 + 0.05, ch * 0.72, zf - 0.15, 'x', 10));
+    root.add(cyl(0.012, 0.08, M.brass, tx - tr - 0.03, 0.63, tz + 0.1, 'x', 10));
+    root.add(tube([[cl / 2 + 0.11, ch * 0.72, zf - 0.15], [cl / 2 + 0.22, 0.4, zf - 0.05], [cl / 2 + 0.3, 0.22, zf], [tx - tr - 0.15, 0.4, tz + 0.15], [tx - tr - 0.07, 0.63, tz + 0.1]], 0.016, hose, 60));
+    root.add(cyl(0.05, 0.02, M.chrome, tx + 0.05, yc + 0.42, tz + tr + 0.01, 'z', 28)); // gauge in the V
+    root.add(cyl(0.042, 0.022, std('#eef2f6', { roughness: 0.3 }), tx + 0.05, yc + 0.42, tz + tr + 0.012, 'z', 28));
+    filterLabel = { text: 'Filter ×3', at: [fx + 0.05, dh + 0.3, pz] };
+  }
 
   return {
     object: root,
@@ -157,9 +237,9 @@ export function createVAir(id) {
       { text: `ปั๊มลมสกรู ${cfg.model}`, at: [0, ch + 0.15, 0] },
       { text: 'ถังลม 600 L', at: [tx, 2.15, tz] },
       { text: 'Air dryer', at: [dx, dh + 0.2, dz + 0.1] },
-      { text: 'Filter ×2', at: [fx, 1.5, tz + 0.26] },
+      filterLabel,
     ],
-    views: { a: [2.6, 2.0, 3.4], b: [-1.8, 2.0, -3.6], target: [0.6, 0.8, -0.5] },
+    views: left ? { a: [-0.6, 1.8, 4.6], b: [-0.6, 1.9, -4.4], target: [-0.6, 0.85, 0] } : { a: [0.95, 1.8, 4.6], b: [0.95, 1.9, -4.4], target: [0.95, 0.85, 0] },
     update() {},
   };
 }

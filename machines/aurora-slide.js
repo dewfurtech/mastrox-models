@@ -76,9 +76,7 @@ export function createAuroraSlide() {
   shell.add(box(0.22, 0.2, 0.3, M.motor, sl / 2 + 0.11, BASE_TOP + 0.25, -0.5)); // gear motor on the end
   shell.add(cyl(0.08, 0.22, M.motor, sl / 2 + 0.11, BASE_TOP + 0.25, -0.24, 'z', 16));
   for (const x of [-sl / 2 + 0.2, sl / 2 - 0.2]) for (const z of [-0.88, 0.88]) shell.add(cyl(0.05, 0.05, M.frame, x, BASE_TOP + 0.04, z, 'z', 16));
-  const badge = logo(0.6);
-  badge.position.set(-sl / 2 + 0.5, BASE_TOP + 0.12, sd / 2 + 0.005);
-  shell.add(badge);
+  shell.add(new THREE.Group()); // the logo used to ride here; it is on the base now (keeps editor paths)
   root.add(shell);
 
   // Board blanks on both trays.
@@ -101,6 +99,12 @@ export function createAuroraSlide() {
   const cycle = [['press', 6], ['move', 4], ['press', 6], ['move', 4]];
   let t = 0, phase = 'press', auto = true;
   shell.position.x = TRAY_X[0];
+
+  // Logo low on the base front at the left end, under the parked shell (photo). Added last so the
+  // editor paths of the other parts don't move.
+  const badge = logo(0.88);
+  badge.position.set(-baseL / 2 + 0.06 + 0.44, 0.27, baseD / 2 + 0.009);
+  root.add(badge);
 
   return {
     object: root,

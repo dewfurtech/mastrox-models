@@ -20,7 +20,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // A machine whose model was rebuilt gets a new storage name, so edits made on the old model
 // (whose part paths no longer match) are not replayed on the new one.
-const STORE_ID = { 'rakete-3500a': 'rakete-3500a-v2', 'rakete-3500ant': 'rakete-3500ant-v2', 'rakete-4800ant': 'rakete-4800ant-v2', 'rakete-5000af': 'rakete-5000af-v2' };
+const STORE_ID = { 'rakete-3500a': 'rakete-3500a-v2', 'rakete-3500ant': 'rakete-3500ant-v2', 'rakete-4800ant': 'rakete-4800ant-v2', 'rakete-5000af': 'rakete-5000af-v2', 'nova-xs': 'nova-xs-v2', 'moon-10': 'moon-10-v2', 'moon-40': 'moon-40-v2', 'moon-40d': 'moon-40d-v2', 'moon-80': 'moon-80-v2' };
 export const storeName = id => STORE_ID[id] ?? id;
 const KEY = id => `mastrox-edits:${storeName(id)}`;
 
