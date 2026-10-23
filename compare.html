@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>เทียบระดับโมเดล</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f4f5; --card: #ffffff; --line: #d4d4d8; --divider: #e4e4e7; --cell: #e3e6e8;
+    --text: #111111; --text-2: #52525b; --text-3: #71717a; --hover: rgba(0,0,0,.05); --accent: #f26022;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans Thai', system-ui, sans-serif;
+    font-size: 15px; line-height: 1.5; }
+  main { max-width: 1400px; margin: 0 auto; padding: 28px 16px 64px; }
+  header.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+  h1 { font-size: 26px; font-weight: 600; margin: 0; }
+  .sub { color: var(--text-2); font-size: 14px; margin: 4px 0 0; max-width: 760px; }
+  a { color: inherit; }
+
+  .toolbar { position: sticky; top: 0; z-index: 3; display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+    padding: 10px 0; margin-bottom: 8px; background: var(--bg); }
+  .seg { display: flex; gap: 4px; flex-wrap: wrap; }
+  .tool { height: 32px; padding: 0 12px; border-radius: 8px; border: none; background: transparent; color: var(--text);
+    font: inherit; font-size: 14px; cursor: pointer; }
+  .tool:hover { background: var(--hover); }
+  .tool.on, .tool.on:hover { background: var(--text); color: var(--card); font-weight: 500; }
+  .spacer { flex: 1; }
+
+  /* Column headings, coarse → real */
+  .levels { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 6px 0 10px; }
+  .level { font-size: 13px; color: var(--text-2); line-height: 1.4; }
+  .level b { display: block; color: var(--text); font-size: 14px; font-weight: 600; }
+  .level .n { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--text); color: var(--card);
+    font-size: 12px; text-align: center; line-height: 20px; margin-right: 6px; vertical-align: 1px; }
+
+  section.cat { margin-top: 26px; }
+  h2 { font-size: 17px; font-weight: 600; margin: 0 0 8px; }
+  .machine { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 14px; margin-bottom: 12px; }
+  .machine header { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 0 2px 10px; }
+  .machine h3 { font-size: 16px; font-weight: 600; margin: 0; }
+  .machine .meta { color: var(--text-2); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .machine .links { margin-left: auto; font-size: 13px; color: var(--text-2); }
+  .row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+  .cell { margin: 0; }
+  .shot { position: relative; display: block; width: 100%; aspect-ratio: 4 / 3; border-radius: 8px; background: var(--cell);
+    border: none; padding: 0; overflow: hidden; cursor: zoom-in; }
+  .shot canvas, .shot img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .shot img { background: #fff; padding: 6px; }
+  .shot .wait { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--text-3); }
+  .shot:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+  .cap { font-size: 12px; color: var(--text-2); margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .mobile-label { display: none; }
+  .none { color: var(--text-3); font-size: 13px; }
+
+  /* Viewer */
+  #viewer { position: fixed; inset: 0; z-index: 10; background: rgba(20,22,24,.86); display: flex; flex-direction: column; padding: 16px; gap: 10px; }
+  #viewer[hidden] { display: none; }
+  #viewer .bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: #fff; }
+  #viewer .bar b { font-size: 16px; font-weight: 600; }
+  #viewer .seg .tool { color: #e4e4e7; }
+  #viewer .seg .tool:hover { background: rgba(255,255,255,.1); }
+  #viewer .seg .tool.on { background: #fff; color: #111; }
+  #viewer .x { margin-left: auto; height: 34px; padding: 0 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,.3);
+    background: transparent; color: #fff; font: inherit; font-size: 14px; cursor: pointer; }
+  #stage { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 320px; grid-template-rows: minmax(0, 1fr); gap: 10px; }
+  #gl { position: relative; border-radius: 10px; overflow: hidden; background: #d9dde0; min-height: 0; }
+  #gl canvas { display: block; width: 100%; height: 100%; }
+  #gl .hint { position: absolute; left: 12px; bottom: 10px; font-size: 12px; color: #3a3a3a; }
+  #side { display: flex; align-items: center; justify-content: center; background: #fff; border-radius: 10px; padding: 10px; min-height: 0; }
+  #side img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  #v-cap { font-size: 13px; color: #d4d4d8; }
+
+  @media (max-width: 900px) {
+    .levels { display: none; }
+    .row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .mobile-label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 3px; }
+    .machine .links { margin-left: 0; width: 100%; }
+    #stage { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) 28%; }
+  }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<main>
+  <header class="top">
+    <div>
+      <h1>เทียบระดับโมเดล</h1>
+      <p class="sub">แต่ละรุ่นเรียงจากหยาบไปเหมือนจริง ทุกช่อง 3D ใช้มุมกล้องเดียวกัน ขนาดเท่ากันจริง คลิกช่องไหนก็ได้เพื่อหมุนดูรอบ ๆ</p>
+    </div>
+    <p class="sub"><a href="list.html">รายการเครื่อง</a> · <a href="index.html">ดูโมเดล 3D</a></p>
+  </header>
+
+  <div class="toolbar">
+    <div class="seg" id="cats"></div>
+    <span class="spacer"></span>
+    <div class="seg" id="side-pick">
+      <button class="tool on" data-view="a">มุมหน้า</button>
+      <button class="tool" data-view="b">มุมหลัง</button>
+    </div>
+  </div>
+
+  <div class="levels" id="levels"></div>
+  <div id="list"></div>
+</main>
+
+<div id="viewer" hidden role="dialog" aria-modal="true" aria-label="หมุนดูโมเดล">
+  <div class="bar">
+    <b id="v-name"></b>
+    <div class="seg" id="v-levels"></div>
+    <span id="v-cap"></span>
+    <button class="x" id="v-close">ปิด (Esc)</button>
+  </div>
+  <div id="stage">
+    <div id="gl"><span class="hint">ลากเพื่อหมุน · เลื่อนล้อเพื่อซูม</span></div>
+    <div id="side"><img id="v-photo" alt=""></div>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { MODELS } from './machines/registry.js';
+import { CATEGORIES, MACHINES } from './data/machines.js';
+import { applyEdits, loadEdits } from './edits.js';
+import { logosReady } from './machines/lib.js';
+import { toBlocky, plainBox } from './machines/blocky.js';
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const byId = Object.fromEntries(MACHINES.map(m => [m.id, m]));
+
+// Coarse → real. The last one is the photo, the rest are 3D.
+const LEVELS = [
+  { id: 'box', name: 'กล่องเปล่า', note: 'ขนาดจริง สีเทา ขีดส้มด้านหน้า' },
+  { id: 'chunky', name: 'ก้อนใหญ่', note: 'ฐาน โต๊ะ คาน ตู้ ฝา ไม่กี่ก้อน' },
+  { id: 'blocky', name: 'ก้อนเหลี่ยม', note: 'แบบที่ Factory Simulator ใช้ตอนนี้' },
+  { id: 'full', name: 'โมเดลเต็ม', note: 'โมเดล 3D ละเอียด' },
+  { id: 'photo', name: 'รูปถ่ายจริง', note: 'เครื่องจริง' },
+];
+const LEVEL3D = LEVELS.filter(l => l.id !== 'photo');
+const PHOTO_FALLBACK = { 'moon-10': 'moon-40', 'moon-40d': 'moon-40' };
+const photoOf = id => PHOTO_FALLBACK[id] ?? id;
+
+$('levels').innerHTML = LEVELS.map((l, i) => `<div class="level"><b><span class="n">${i + 1}</span>${l.name}</b>${l.note}</div>`).join('');
+
+// ---- one shared renderer for the snapshots --------------------------------------------------
+const W = 520, H = 390;
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(W, H, false);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+const roomEnv = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+
+function makeScene() {
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color('#d9dde0');
+  scene.add(new THREE.HemisphereLight('#ffffff', '#7d8086', 1.4));
+  const key = new THREE.DirectionalLight('#ffffff', 2.4);
+  key.position.set(3, 6, 4);
+  key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048);
+  key.shadow.bias = -0.0005;
+  scene.add(key, key.target);
+  const fill = new THREE.DirectionalLight('#ffffff', 0.9);
+  fill.position.set(-4, 3, -4);
+  scene.add(fill);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshStandardMaterial({ color: '#c9ccce', roughness: 0.9 }));
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+  const grid = new THREE.GridHelper(30, 30, '#a9adb1', '#bcc0c3');
+  grid.position.y = 0.001;
+  scene.add(grid);
+  // Shadow box follows the machine.
+  scene.userData.fit = b => {
+    const c = b.getCenter(new THREE.Vector3()), r = b.getSize(new THREE.Vector3()).length() / 2 + 0.5;
+    key.position.copy(c).add(new THREE.Vector3(3, 6, 4));
+    key.target.position.copy(c);
+    Object.assign(key.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 0.1, far: 30 });
+    key.shadow.camera.updateProjectionMatrix();
+  };
+  return scene;
+}
+const shotScene = makeScene();
+
+// Build the machine (with Editor changes, as on index.html) and its three stand-ins.
+function build(id) {
+  const machine = MODELS[id]();
+  applyEdits(machine.object, loadEdits(id));
+  machine.object.updateMatrixWorld(true);
+  const objects = {
+    box: plainBox(machine),
+    chunky: toBlocky(machine, { level: 'chunky' }),
+    blocky: toBlocky(machine, { level: 'blocky' }),
+    full: machine.object,
+  };
+  const bounds = new THREE.Box3().setFromObject(objects.box);   // in the scene's frame, label included
+  // The full model without its operator-zone pad, like the others.
+  machine.object.children.filter(c => c.userData.operatorZone).forEach(z => (z.visible = false));
+  for (const k of ['box', 'chunky', 'blocky']) objects[k].traverse(o => { if (o.isMesh) o.castShadow = o.receiveShadow = true; });
+  let tris = 0;
+  machine.object.traverse(o => { if (o.isMesh && o.visible) tris += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1); });
+  const size = bounds.getSize(new THREE.Vector3());
+  const caps = {
+    box: `วัดได้ ${mm(size.x)} × ${mm(size.z)} × ${mm(size.y)} mm`,
+    chunky: `${objects.chunky.userData.blocky.blocks} ก้อน`,
+    blocky: `${objects.blocky.userData.blocky.blocks} ก้อน`,
+    full: `${Math.round(tris).toLocaleString('en')} สามเหลี่ยม`,
+  };
+  return { machine, bounds, objects, caps, env: !!machine.object.userData.environment };
+}
+const mm = v => Math.round(v * 1000).toLocaleString('en');
+
+function dispose(obj) {
+  obj.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    for (const m of [].concat(o.material || [])) { if (m.userData.shared) continue; if (m.map) m.map.dispose(); m.dispose(); }
+  });
+}
+
+// Camera along the model's own view direction, backed off until the whole machine fits.
+function frame(camera, machine, bounds, which) {
+  const v = machine.views || { a: [-4, 3, 5], b: [4, 3, -5], target: [0, 0.8, 0] };
+  const target = bounds.getCenter(new THREE.Vector3());
+  target.y = Math.min(target.y, bounds.max.y * 0.45);
+  const dir = new THREE.Vector3(...v[which]).sub(new THREE.Vector3(...v.target)).normalize();
+  let r = 0;
+  const c = new THREE.Vector3();
+  for (let i = 0; i < 8; i++) r = Math.max(r, c.set(i & 1 ? bounds.max.x : bounds.min.x, i & 2 ? bounds.max.y : bounds.min.y, i & 4 ? bounds.max.z : bounds.min.z).distanceTo(target));
+  const vfov = THREE.MathUtils.degToRad(camera.fov);
+  const hfov = 2 * Math.atan(Math.tan(vfov / 2) * camera.aspect);
+  camera.position.copy(target).addScaledVector(dir, r / Math.sin(Math.min(vfov, hfov) / 2) * 0.74);
+  camera.lookAt(target);
+  return target;
+}
+
+// ---- page -------------------------------------------------------------------------------------
+let view = 'a', cat = 'all';
+const ids = Object.keys(MODELS);
+$('cats').innerHTML = [{ id: 'all', name: 'ทั้งหมด' }, ...CATEGORIES.filter(c => ids.some(id => byId[id]?.cat === c.id))]
+  .map(c => `<button class="tool${c.id === 'all' ? ' on' : ''}" data-cat="${c.id}">${esc(c.name)}</button>`).join('');
+
+$('list').innerHTML = CATEGORIES.map(c => {
+  const list = ids.filter(id => (byId[id]?.cat ?? 'extra') === c.id);
+  if (!list.length) return '';
+  return `<section class="cat" data-cat="${c.id}"><h2>${esc(c.name)}</h2>${list.map(card).join('')}</section>`;
+}).join('');
+
+function card(id) {
+  const m = byId[id] || { name: id };
+  const size = m.size ? `โบรชัวร์ ${m.size.map(v => v.toLocaleString('en')).join(' × ')} mm` : '';
+  const pid = photoOf(id);
+  const cells = LEVELS.map(l => {
+    const label = `<span class="mobile-label">${l.name}</span>`;
+    if (l.id === 'photo') return `<figure class="cell">${label}<button class="shot" data-id="${id}" data-level="photo" aria-label="รูปจริง ${esc(m.name)}">
+        <img loading="lazy" src="photos/${pid}/${pid}.png" alt="รูปจริง ${esc(byId[pid]?.name ?? pid)}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'wait',textContent:'ยังไม่มีรูป'}))"></button>
+        <figcaption class="cap">${pid === id ? 'รูปจากคลังภาพ' : `ใช้รูป ${esc(byId[pid]?.name ?? pid)}`}</figcaption></figure>`;
+    return `<figure class="cell">${label}<button class="shot" data-id="${id}" data-level="${l.id}" aria-label="${l.name} ${esc(m.name)}">
+        <canvas width="${W * renderer.getPixelRatio()}" height="${H * renderer.getPixelRatio()}"></canvas><span class="wait">กำลังสร้าง…</span></button>
+        <figcaption class="cap" data-cap="${l.id}">&nbsp;</figcaption></figure>`;
+  }).join('');
+  return `<article class="machine" data-id="${id}">
+    <header><h3>${esc(m.name)}</h3><span class="meta">${esc(size)}</span>
+      <span class="links"><a href="index.html?m=${id}">เปิดโมเดลเต็ม</a></span></header>
+    <div class="row">${cells}</div></article>`;
+}
+
+// Snapshots are drawn row by row as they scroll into view, one machine at a time.
+// Every row is queued in page order; rows that scroll into view jump the queue.
+const rows = [...document.querySelectorAll('.machine')];
+const queue = [...rows], done = new Set(rows);
+let busy = false;
+const io = new IntersectionObserver(entries => {
+  for (const e of entries) {
+    const i = queue.indexOf(e.target);
+    if (e.isIntersecting && i > 0) queue.unshift(...queue.splice(i, 1));
+  }
+}, { rootMargin: '300px 0px' });
+rows.forEach(el => io.observe(el));
+
+const tick = () => new Promise(r => setTimeout(r, 0));   // not rAF: it stops in background tabs
+const shotCam = new THREE.PerspectiveCamera(35, W / H, 0.05, 200);
+async function pump() {
+  if (busy) return;
+  busy = true;
+  while (queue.length) {
+    const el = queue.shift();
+    await tick();
+    try { await shoot(el); } catch (err) {
+      console.error(el.dataset.id, err);
+      el.querySelectorAll('.shot .wait').forEach(w => (w.textContent = 'สร้างไม่สำเร็จ'));
+    }
+  }
+  busy = false;
+}
+
+async function shoot(el) {
+  const id = el.dataset.id;
+  const b = build(id);
+  frame(shotCam, b.machine, b.bounds, view);
+  shotScene.userData.fit(b.bounds);
+  for (const l of LEVEL3D) {
+    const obj = b.objects[l.id];
+    shotScene.add(obj);
+    shotScene.environment = l.id === 'full' && b.env ? roomEnv : null;
+    shotScene.environmentIntensity = 0.85;
+    renderer.render(shotScene, shotCam);
+    const cv = el.querySelector(`.shot[data-level="${l.id}"] canvas`);
+    const ctx = cv.getContext('2d');
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(renderer.domElement, 0, 0, cv.width, cv.height);
+    cv.nextElementSibling?.remove();
+    el.querySelector(`[data-cap="${l.id}"]`).textContent = b.caps[l.id];
+    shotScene.remove(obj);
+    await tick();
+  }
+  for (const k of ['box', 'chunky', 'blocky', 'full']) dispose(b.objects[k]);
+}
+
+$('side-pick').addEventListener('click', e => {
+  const t = e.target.closest('[data-view]');
+  if (!t || t.dataset.view === view) return;
+  view = t.dataset.view;
+  $('side-pick').querySelectorAll('.tool').forEach(x => x.classList.toggle('on', x === t));
+  // Redraw everything already drawn, visible rows first.
+  queue.length = 0;
+  const drawn = [...done];
+  const vis = el => { const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; };
+  drawn.sort((a, b) => vis(b) - vis(a)).forEach(el => queue.push(el));
+  pump();
+});
+$('cats').addEventListener('click', e => {
+  const t = e.target.closest('[data-cat]');
+  if (!t) return;
+  cat = t.dataset.cat;
+  $('cats').querySelectorAll('.tool').forEach(x => x.classList.toggle('on', x === t));
+  document.querySelectorAll('section.cat').forEach(s => (s.hidden = cat !== 'all' && s.dataset.cat !== cat));
+});
+
+// ---- viewer: one machine, orbit, switch level --------------------------------------------------
+let vr = null, vScene, vCam, vControls, vBuilt = null, vLevel = 'full', vRaf = 0;
+function openViewer(id, level) {
+  if (!vr) {
+    vr = new THREE.WebGLRenderer({ antialias: true });
+    vr.setPixelRatio(Math.min(devicePixelRatio, 2));
+    vr.shadowMap.enabled = true;
+    vr.shadowMap.type = THREE.PCFSoftShadowMap;
+    vr.toneMapping = THREE.ACESFilmicToneMapping;
+    $('gl').prepend(vr.domElement);
+    vScene = makeScene();
+    vCam = new THREE.PerspectiveCamera(35, 1, 0.05, 200);
+    vControls = new OrbitControls(vCam, vr.domElement);
+    vControls.enableDamping = true;
+    vControls.maxPolarAngle = Math.PI * 0.49;
+    $('v-levels').innerHTML = LEVEL3D.map((l, i) => `<button class="tool" data-level="${l.id}">${i + 1} ${l.name}</button>`).join('');
+    $('v-levels').addEventListener('click', e => { const t = e.target.closest('[data-level]'); if (t) setLevel(t.dataset.level); });
+  }
+  if (vBuilt) { for (const k of ['box', 'chunky', 'blocky', 'full']) { vScene.remove(vBuilt.objects[k]); dispose(vBuilt.objects[k]); } }
+  vBuilt = build(id);
+  vScene.userData.fit(vBuilt.bounds);
+  $('viewer').hidden = false;
+  document.body.style.overflow = 'hidden';
+  vResize();
+  const target = frame(vCam, vBuilt.machine, vBuilt.bounds, view);
+  vControls.target.copy(target);
+  vControls.update();
+  $('v-name').textContent = byId[id]?.name ?? id;
+  const pid = photoOf(id);
+  $('v-photo').src = `photos/${pid}/${pid}.png`;
+  $('v-photo').alt = `รูปจริง ${byId[pid]?.name ?? pid}`;
+  setLevel(level === 'photo' ? 'full' : level);
+  cancelAnimationFrame(vRaf);
+  const loop = () => { vRaf = requestAnimationFrame(loop); vControls.update(); vr.render(vScene, vCam); };
+  loop();
+  $('v-close').focus();
+}
+function setLevel(level) {
+  vLevel = level;
+  for (const k of ['box', 'chunky', 'blocky', 'full']) vScene.remove(vBuilt.objects[k]);
+  vScene.add(vBuilt.objects[level]);
+  vScene.environment = level === 'full' && vBuilt.env ? roomEnv : null;
+  vScene.environmentIntensity = 0.85;
+  $('v-levels').querySelectorAll('.tool').forEach(t => t.classList.toggle('on', t.dataset.level === level));
+  $('v-cap').textContent = vBuilt.caps[level];
+}
+function closeViewer() {
+  $('viewer').hidden = true;
+  document.body.style.overflow = '';
+  cancelAnimationFrame(vRaf);
+}
+function vResize() {
+  if (!vr || $('viewer').hidden) return;
+  const r = $('gl').getBoundingClientRect();
+  vr.setSize(r.width, r.height, false);
+  vCam.aspect = r.width / r.height;
+  vCam.updateProjectionMatrix();
+}
+addEventListener('resize', vResize);
+$('v-close').addEventListener('click', closeViewer);
+addEventListener('keydown', e => {
+  if ($('viewer').hidden) return;
+  if (e.key === 'Escape') closeViewer();
+  const n = +e.key;
+  if (n >= 1 && n <= LEVEL3D.length) setLevel(LEVEL3D[n - 1].id);
+});
+$('list').addEventListener('click', e => {
+  const s = e.target.closest('.shot');
+  if (s) openViewer(s.dataset.id, s.dataset.level);
+});
+// The logo artwork loads as an image: wait for it, or the first snapshots come out without logos.
+Promise.race([logosReady, new Promise(r => setTimeout(r, 4000))]).then(pump);
+</script>
+</body>
+</html>
